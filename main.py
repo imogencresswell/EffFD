@@ -8,6 +8,9 @@ Usage:
 
 Options:
     --star_names=<star>            Names of stars  [default: [AU Mic]]
+    
+    
+    --root_dir=<dir>               Root directory for outputs [default: ./]
 
 """
 
@@ -19,15 +22,17 @@ from docopt import docopt
 from configparser import ConfigParser
 from pathlib import Path
 import csv
+import os
 
 def save_raw_lc(object):
-    #function that saves lightkurve image
+    #function that saves lightkurve image and csv file
     plt.figure()
     pixelfile = lk.search_targetpixelfile(object)[2].download()
     lc = pixelfile.to_lightcurve(aperture_mask='all').flatten()
-    lc.to_csv(str(object)+'.csv')
+    object_name = object.replace(' ', '_')
+    lc.to_csv(str(object_name)+'.csv', overwrite=True)
     lc.plot()
-    plt.savefig(str(object)+'.png')
+    plt.savefig(str(object_name)+'.png')
 
 #reads in arguments from config file or command line
 #also allows x = True commands
@@ -52,9 +57,14 @@ if args['<config>'] is not None:
 
 if args['--star_names'] is not None:
     star_names = str(args['--star_names'])
-    star_names_list = star_names.split(',')
+    star_names_list = star_names.split(', ')
+    
 
 for star in star_names_list:
+    star_path = os.path.join(str(args['--root_dir']),star.replace(' ', '_'))
+    os.mkdir(star_path)
+    os.chdir(star_path) #there is defs a better way to do this
     save_raw_lc(star)
+    os.chdir('../')
 
 
