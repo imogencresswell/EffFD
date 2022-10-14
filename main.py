@@ -25,6 +25,7 @@ def save_raw_lc(object):
     plt.figure()
     pixelfile = lk.search_targetpixelfile(object)[2].download()
     lc = pixelfile.to_lightcurve(aperture_mask='all').flatten()
+    lc.to_csv(str(object)+'.csv')
     lc.plot()
     plt.savefig(str(object)+'.png')
 
