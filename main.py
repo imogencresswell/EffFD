@@ -8,6 +8,8 @@ Usage:
 Options:
     --star_names=<star>            Names of stars  [default: AU Mic]
     --root_dir=<dir>               Root directory for outputs [default: ./]
+    --savgov_iterations=int        Iterations for lc.flatten [default: 9]
+    --savgov_sigma_cutoff=int      Sigma cutoff for lc.flatten [default: 3]
 
 """
 import numpy as np
@@ -20,19 +22,15 @@ import csv
 import os
 
 
-def save_raw_lc(object, save_path):
+def save_raw_lc(object, save_path, filter_iter, filter_sig):
     # function that saves lightkurve image and csv file
     search_result = lk.search_targetpixelfile(object)
     if not search_result:
         raise FileNotFoundError('No results for {}.'.format(object))
 
     pixelfile = search_result[2].download()
-    lc = pixelfile.to_lightcurve(aperture_mask='all').flatten(niters=9,
-                                                              sigma=2)
-    # Added more strenuous filter for flatten. It is a 9-iteration savgov
-    # which throws away data points above 2sigma, rather than the default
-    # 3-iter, 3-sigma filter.
-    # We might want to add these as options in the config.
+    lc = pixelfile.to_lightcurve(aperture_mask='all')
+    lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
 
     plt.figure()
     lc.plot()
@@ -68,22 +66,30 @@ def main():
         star_names = str(args['--star_names'])
         star_names_list = list(map(str.strip, star_names.split(',')))
 
-    print('Starting individual star search.\n')
-    for star in star_names_list:
-        star_path = os.path.join(str(args['--root_dir']),
-                                 star.replace(' ', '_'))
+        print('\n###############################')
+        print('Starting individual star search')
+        print('###############################\n')
 
-        try:  # Keeps program running if folders already exist
-            os.mkdir(star_path)
-        except FileExistsError:
-            print('A folder for {} already exists.'.format(star))
+        for star in star_names_list:
+            star_path = os.path.join(str(args['--root_dir']),
+                                     star.replace(' ', '_'))
 
-        try:  # Keeps program running if a star name is not searchable
-            save_raw_lc(star, star_path)
-        except FileNotFoundError:
-            print('No search results found for {}.'.format(star))
+            try:  # Keeps program running if folders already exist
+                os.mkdir(star_path)
+            except FileExistsError:
+                print('A folder for {} already exists.'.format(star))
 
-        print('Operations for {} finished.\n'.format(star))
+            try:  # Keeps program running if a star name is not searchable
+                save_raw_lc(star,
+                            star_path,
+                            int(args['--savgov_iterations']),
+                            int(args['--savgov_sigma_cutoff']))
+            except FileNotFoundError:
+                print('No search results found for {}.'.format(star))
+                # If we add other functions under this and they all fail
+                # we could have an os.rmdir here.
+
+            print('Operations for {} finished.\n'.format(star))
 
 
 if __name__ == '__main__':
