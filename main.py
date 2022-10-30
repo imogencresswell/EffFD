@@ -22,7 +22,11 @@ import os
 
 def save_raw_lc(object, save_path):
     #function that saves lightkurve image and csv file
-    pixelfile = lk.search_targetpixelfile(object)[2].download()
+    search_result = lk.search_targetpixelfile(object)
+    if not search_result:
+        raise FileNotFoundError('No results for {}.'.format(object))
+
+    pixelfile = search_result[2].download()
     lc = pixelfile.to_lightcurve(aperture_mask='all').flatten()
 
     plt.figure()
@@ -49,40 +53,33 @@ def main():
                     args[k] = v
 
     #PROBEMS/QUERIES:
-    # the search_target pixel won't find AU Mic if star name is a string...
-    # but if you put a string into the function it finds it...
-    # dont understand
-
 
     #TODO:
     # Need to figure out what the index means in search target pixel file..
     # could use download all but takes forever,
     # should be a user input but idk what it is.
-    #
-    # Need to make sure we add failsafes if there is a
-    # typo/star not found in one name i.e program doesnt error
-    # out but continues without that name.
 
 
     if args['--star_names'] is not None:
         star_names = str(args['--star_names'])
         star_names_list = list(map(str.strip, star_names.split(',')))
-        print(star_names_list)
 
-
+    print('Starting individual star search.\n')
     for star in star_names_list:
         star_path = os.path.join(str(args['--root_dir']),
                                  star.replace(' ', '_'))
 
-        # This stops code from breaking if a folder already exists
-        try:
+        try:  # Keeps program running if folders already exist
             os.mkdir(star_path)
         except FileExistsError:
             print('A folder for {} already exists.'.format(star))
 
-        save_raw_lc(star, star_path)
+        try:  # Keeps program running if a star name is not searchable
+            save_raw_lc(star, star_path)
+        except FileNotFoundError:
+            print('No search results found for {}.'.format(star))
 
-        print('Operations for {} finished.'.format(star))
+        print('Operations for {} finished.\n'.format(star))
 
 
 if __name__=='__main__':
