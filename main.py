@@ -21,13 +21,18 @@ import os
 
 
 def save_raw_lc(object, save_path):
-    #function that saves lightkurve image and csv file
+    # function that saves lightkurve image and csv file
     search_result = lk.search_targetpixelfile(object)
     if not search_result:
         raise FileNotFoundError('No results for {}.'.format(object))
 
     pixelfile = search_result[2].download()
-    lc = pixelfile.to_lightcurve(aperture_mask='all').flatten()
+    lc = pixelfile.to_lightcurve(aperture_mask='all').flatten(niters=9,
+                                                              sigma=2)
+    # Added more strenuous filter for flatten. It is a 9-iteration savgov
+    # which throws away data points above 2sigma, rather than the default
+    # 3-iter, 3-sigma filter.
+    # We might want to add these as options in the config.
 
     plt.figure()
     lc.plot()
@@ -52,13 +57,12 @@ def main():
                         v = True
                     args[k] = v
 
-    #PROBEMS/QUERIES:
+    # PROBEMS/QUERIES:
 
-    #TODO:
+    # TODO:
     # Need to figure out what the index means in search target pixel file..
     # could use download all but takes forever,
     # should be a user input but idk what it is.
-
 
     if args['--star_names'] is not None:
         star_names = str(args['--star_names'])
@@ -82,5 +86,5 @@ def main():
         print('Operations for {} finished.\n'.format(star))
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
