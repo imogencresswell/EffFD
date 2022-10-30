@@ -20,7 +20,7 @@ import csv
 import os
 
 
-def save_raw_lc(object):
+def save_raw_lc(object, save_path):
     #function that saves lightkurve image and csv file
     pixelfile = lk.search_targetpixelfile(object)[2].download()
     lc = pixelfile.to_lightcurve(aperture_mask='all').flatten()
@@ -28,7 +28,7 @@ def save_raw_lc(object):
     plt.figure()
     lc.plot()
 
-    save_string = save_dir + '/' + object.replace(' ', '_')
+    save_string = save_path + '/' + object.replace(' ', '_')
     lc.to_csv(save_string+'.csv', overwrite=True)
     plt.savefig(save_string+'.png')
 
@@ -44,7 +44,8 @@ def main():
         for n, v in config.items('parameters'):
             for k in args.keys():
                 if k.split('--')[-1].lower() == n:
-                    if v == 'true': v = True
+                    if v == 'true':
+                        v = True
                     args[k] = v
 
     #PROBEMS/QUERIES:
@@ -82,3 +83,7 @@ def main():
         save_raw_lc(star, star_path)
 
         print('Operations for {} finished.'.format(star))
+
+
+if __name__=='__main__':
+    main()
