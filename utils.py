@@ -79,14 +79,14 @@ def analyze_lc(object, csv_path):
 
 
 def generate_ffd(object, list_of_paths):
-    monitoring_time = 0.0 * u.second
-    flare_energies = np.array([]) * u.erg
+    monitoring_time = 0.0
+    flare_energy = np.array([])
 
-    # for file in files:
-    #   get table
-    #   monitoring_time += table['total_lc_time'][0]  # every spot is the same
-    #   flare_energy = np.concatenate(flare_energy, table['energy'])
-    #   flare_energy.sort
+    for file_path in list_of_paths:
+        tbl = ascii.read(file_path, guess=False, format='ecsv')
+        monitoring_time += tbl['total_lc_time'][0]
+        flare_energy = np.append(flare_energy, tbl['energy'].value)
+
 
     # will need to do a linear regression to find the slope of the curve, BUT
     # we have to use the middle regime of the FFD without smaller/super
