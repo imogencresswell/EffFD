@@ -41,9 +41,9 @@ def main():
                         v = True
                     args[k] = v
 
-    ###
-    ### Create list of stars to search for
-    ###
+    #
+    # Create list of stars to search for
+    #
     if args['--star_names'] is not None:
         star_names = str(args['--star_names'])
         star_names_list = list(map(str.strip, star_names.split(',')))

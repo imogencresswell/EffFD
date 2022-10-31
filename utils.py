@@ -38,8 +38,9 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
         lc = result.download()
         lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
 
-        ### Leaving the older way of getting the LC from the pixel file
-        ### for a bit.
+        # Leaving the older way of getting the LC from the pixel file
+        # for a bit.
+        #
         # pixelfile = search_result[window].download()
         # lc = pixelfile.to_lightcurve(aperture_mask='all')
         # lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
