@@ -19,10 +19,10 @@ Options:
 """
 import os
 import glob
+import utils as ut
+from pathlib import Path
 from docopt import docopt
 from configparser import ConfigParser
-from pathlib import Path
-import utils as ut
 
 
 def main():
