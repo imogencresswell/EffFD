@@ -70,7 +70,7 @@ def analyze_lc(csv_path):
     # FLARE FINDING METHOD GOES HERE
     #
 
-    # Toy data input
+    # Toy data input for now
     flare_tbl = Table()
     flare_tbl['energy'] = np.random.randint(1, 300, size=30) * 1e29 * u.erg
     flare_tbl['total_lc_time'] = len(lc['time']) * 120.0 * u.second
@@ -89,23 +89,31 @@ def generate_ffd(object, save_path, list_of_paths):
         flare_energy = np.append(flare_energy, tbl['energy'].value)
 
     flare_energy.sort()
+    log_flare_energy = np.log10(flare_energy)
+
     monitoring_time *= tbl['total_lc_time'].unit
     monitoring_time = monitoring_time.to(u.day)
 
     cumulative_number = np.arange(len(flare_energy)) + 1
     flare_frequency = cumulative_number[::-1] / monitoring_time
 
+    # Will need some linear regression to give
+    # FitX, FitY =
+    # slope, slope_err =
+    # BUT it has to be for the middle FFD regime, not small/super flares
+
     fig, ax = plt.subplots()
-    ax.plot(np.log10(flare_energy),
+    ax.plot(log_flare_energy,
             flare_frequency,
             marker='o',
             color='darkcyan')
+    # ax.plot(FitX,
+    #         FitY,
+    #         color='skyblue',
+    #         label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
     ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % tbl['energy'].unit,
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
            title='EFFD for {}'.format(object))
+    ax.legend()
     fig.savefig('{}/{}_FFD.png'.format(save_path, object.replace(' ', '_')))
     plt.close(fig)
-
-    # will need to do a linear regression to find the slope of the curve, BUT
-    # we have to use the middle regime of the FFD without smaller/super
-    # flares. So, we will have to make a function to take care of that.
