@@ -21,6 +21,8 @@ def get_spectral_temp(classification):
         return 10000, 30000
     elif classification == 'O':
         return 30000, 60000
+    else:
+        raise ValueError('Improper spectral type given.')
 
 
 def save_raw_lc(object, save_path, filter_iter, filter_sig):
@@ -70,7 +72,7 @@ def analyze_lc(object, csv_path):
     # Toy data input
     flare_tbl = Table()
     flare_tbl['energy'] = np.random.randint(1, 300, size=30) * 1e29 * u.erg
-    flare_tbl['total_time'] = len(lc['time']) * 120.0 * u.second
+    flare_tbl['total_lc_time'] = len(lc['time']) * 120.0 * u.second
 
     save_path = csv_path.replace('.csv', '_flares.ecsv')
     flare_tbl.write(save_path, overwrite=True)
