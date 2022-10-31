@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import lightkurve as lk
 import matplotlib.pyplot as plt
@@ -36,8 +37,14 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
         raise FileNotFoundError('No results for {}.'.format(object))
 
     for result in search_result:
-        lc = result.download()
-        lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
+        sector = result[0].mission[0][-2:]
+        save_string = '{}/{}_{}'.format(save_path,
+                                        object.replace(' ', '_'),
+                                        sector)
+
+        if os.path.isfile(save_string+'.csv'):
+            print('Sector {} CSV exists for {}'.format(sector, object))
+            continue
 
         # Leaving the older way of getting the LC from the pixel file
         # for a bit.
@@ -46,9 +53,8 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
         # lc = pixelfile.to_lightcurve(aperture_mask='all')
         # lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
 
-        save_string = '{}/{}_{}'.format(save_path,
-                                        object.replace(' ', '_'),
-                                        result[0].mission[0][-2:])  # sector
+        lc = result.download()
+        lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
         lc.to_csv(save_string+'.csv', overwrite=True)
 
         plt.figure()
@@ -73,7 +79,9 @@ def analyze_lc(csv_path):
 
     # Toy data input for now
     flare_tbl = Table()
-    flare_tbl['energy'] = np.random.randint(1, 300, size=30) * 1e29 * u.erg
+    flare_tbl['energy'] = np.random.choice(range(1,5000),
+                                           size=20,
+                                           replace=False) * 1e29 * u.erg
     flare_tbl['total_lc_time'] = len(lc['time']) * 120.0 * u.second
 
     save_path = csv_path.replace('.csv', '_flares.ecsv')
@@ -84,7 +92,6 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
     dx = np.diff(x, 1)
     dy = np.diff(y, 1)
     yfirst = dy / dx
-
     condition = np.where((yfirst > min_slope) & (yfirst < max_slope))[0]
 
     for idx, place in enumerate(condition):
@@ -95,12 +102,19 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
 
     new_x = x[starting_idx:ending_idx]
     new_y = y[starting_idx:ending_idx]
-
     return new_x, new_y
 
 
 def func_powerlaw(x, a, b):
     return a + b*x
+
+
+def calculate_slope_powerlaw(x, y):
+    solution = curve_fit(func_powerlaw, x, y, maxfev=2000)
+    a = solution[0][0]
+    b = solution[0][1]
+    b_err = b/np.sqrt(len(x))
+    return a, b, b_err
 
 
 def generate_ffd(object, save_path, list_of_paths):
@@ -122,12 +136,9 @@ def generate_ffd(object, save_path, list_of_paths):
     flare_frequency = cumulative_number[::-1] / monitoring_time.value
     log_frequency = np.log10(flare_frequency)
 
-    # linear regression to give slope
+    # linear regression to get slope
     m_ene, m_fre = get_middle_ffd_regime(log_energy, log_frequency)
-    solu = curve_fit(func_powerlaw, m_ene, m_fre, maxfev=2000)
-    slope = solu[0][1]
-    slope_err = slope/np.sqrt(len(m_ene))
-    y_fit = 10**func_powerlaw(m_ene, solu[0][0], slope)
+    intercept, slope, slope_err = calculate_slope_powerlaw(m_ene, m_fre)
     # alpha = np.abs(slope - 1)
 
     fig, ax = plt.subplots()
@@ -136,7 +147,7 @@ def generate_ffd(object, save_path, list_of_paths):
             marker='o',
             color='skyblue')
     ax.plot(m_ene,
-            y_fit,
+            10**func_powerlaw(m_ene, intercept, slope),
             color='black',
             label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
     ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % tbl['energy'].unit,
