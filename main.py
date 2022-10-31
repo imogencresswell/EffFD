@@ -10,27 +10,25 @@ Options:
 
     --star_names=<star>            Names of stars
     --spectral_type=<type>         Spectral type to search for stars
-    --teff_low=<temp>              Lower limit of Teff to search [default: 2000]
-    --teff_high=<temp>             Lower limit of Teff to search [default: 3500]
+    --teff_low=<temp>              Low Teff limit to search [default: 2000]
+    --teff_high=<temp>             High Teff limit to search [default: 3500]
 
     --savgov_iterations=<iter>     Iterations for lc.flatten  [default: 9]
     --savgov_sigma_cutoff=<sig>    Sigma cutoff for lc.flatten  [default: 3]
 
 """
+import os
+import glob
+import utils as ut
+from pathlib import Path
 from docopt import docopt
 from configparser import ConfigParser
-from pathlib import Path
-import os
-import utils as ut
 
 
 def main():
-    # IT: What about having a function that auto-gens a config file if one
-    # one doesn't exist? It could have all the options, with most commented
-    # out?
-    #
     # Reads in arguments from config file or command line.
     # Also allows x = True commands.
+    print('Loading parameters...')
     args = docopt(__doc__)
     if args['<config>'] is not None:
         config_file = Path(args['<config>'])
@@ -43,20 +41,9 @@ def main():
                         v = True
                     args[k] = v
 
-    # PROBEMS/QUERIES:
-
-    # TODO:
-    # IC: Need to figure out what the index means in search target pixel file.
-    # could use download all but takes forever,
-    # should be a user input but idk what it is.
-    #
-    # IT: Pretty sure it's the different times the star was observed.
-    # We'll have to loop through them and add the result tables
-    # together, though we could probably keep the figures separate.
-    # We could also work on the LC separately and combine the numbers at the
-    # point of making the FFD (combine flare energy tables and add together
-    # total time)
-
+    ###
+    ### Create list of stars to search for
+    ###
     if args['--star_names'] is not None:
         star_names = str(args['--star_names'])
         star_names_list = list(map(str.strip, star_names.split(',')))
@@ -77,16 +64,8 @@ def main():
             else:
                 teff_low, teff_high = ut.get_spectral_temp(spectral_type)
 
-        # IT: astroquery search for list of stars by temperature range.
-        # Use the updated TESS catalogue "IV/39/tic82".
-        # Can you also look if there is any qualifier for 'flaring' stars?
-        # It would cut the run time down a lot. We should leave it as an
-        # option though for people who want to look at non-flaring stars to
-        # see if anything comes up.
-        # Not all stars have Teff, so we might want to find some metric
-        # of what percentage of the catalogue this covers.
+        # ASTROQUERY HERE
         star_names_list = []
-
 
     print('\n###############################')
     print('Starting individual star search')
@@ -106,12 +85,18 @@ def main():
 
         try:  # Keeps program running if a star name is not searchable
             ut.save_raw_lc(star,
-                        star_path,
-                        int(args['--savgov_iterations']),
-                        int(args['--savgov_sigma_cutoff']))
+                           star_path,
+                           int(args['--savgov_iterations']),
+                           int(args['--savgov_sigma_cutoff']))
         except FileNotFoundError:
             print('No search results found for {}.'.format(star))
+            print('Continuing on...\n')
             os.rmdir(star_path)
+            continue
+
+        lc_path_list = glob.glob(os.path.join(star_path, '*.csv'))
+        for lc_path in lc_path_list:
+            ut.analyze_lc(star, lc_path)
 
         print('Operations for {} finished.\n'.format(star))
 
