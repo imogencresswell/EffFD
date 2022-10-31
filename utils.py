@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.io import ascii
 from astropy.table import Table
+from scipy.optimize import curve_fit
 
 
 def get_spectral_temp(classification):
@@ -79,6 +80,29 @@ def analyze_lc(csv_path):
     flare_tbl.write(save_path, overwrite=True)
 
 
+def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
+    dx = np.diff(x, 1)
+    dy = np.diff(y, 1)
+    yfirst = dy / dx
+
+    condition = np.where((yfirst > min_slope) & (yfirst < max_slope))[0]
+
+    for idx, place in enumerate(condition):
+        if place - condition[idx+1] <= 2:
+            starting_idx = place + 1
+            break
+    ending_idx = condition[-1] - 1
+
+    new_x = x[starting_idx:ending_idx]
+    new_y = y[starting_idx:ending_idx]
+
+    return new_x, new_y
+
+
+def func_powerlaw(x, a, b):
+    return a + b*x
+
+
 def generate_ffd(object, save_path, list_of_paths):
     monitoring_time = 0.0
     flare_energy = np.array([])
@@ -89,33 +113,36 @@ def generate_ffd(object, save_path, list_of_paths):
         flare_energy = np.append(flare_energy, tbl['energy'].value)
 
     flare_energy.sort()
-    log_flare_energy = np.log10(flare_energy)
+    log_energy = np.log10(flare_energy)
 
     monitoring_time *= tbl['total_lc_time'].unit
     monitoring_time = monitoring_time.to(u.day)
 
     cumulative_number = np.arange(len(flare_energy)) + 1
-    flare_frequency = cumulative_number[::-1] / monitoring_time
+    flare_frequency = cumulative_number[::-1] / monitoring_time.value
+    log_frequency = np.log10(flare_frequency)
 
-    # Will need some linear regression to give
-    fitx = []
-    fity = []
-    slope = 0.0
-    slope_err = 0.0
-    # BUT it has to be for the middle FFD regime, not small/super flares
+    # linear regression to give slope
+    m_ene, m_fre = get_middle_ffd_regime(log_energy, log_frequency)
+    solu = curve_fit(func_powerlaw, m_ene, m_fre, maxfev=2000)
+    slope = solu[0][1]
+    slope_err = slope/np.sqrt(len(m_ene))
+    y_fit = 10**func_powerlaw(m_ene, solu[0][0], slope)
+    # alpha = np.abs(slope - 1)
 
     fig, ax = plt.subplots()
-    ax.plot(log_flare_energy,
+    ax.plot(log_energy,
             flare_frequency,
             marker='o',
-            color='darkcyan')
-    ax.plot(fitx,
-            fity,
-            color='skyblue',
+            color='skyblue')
+    ax.plot(m_ene,
+            y_fit,
+            color='black',
             label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
     ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % tbl['energy'].unit,
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
-           title='EFFD for {}'.format(object))
+           title='EFFD for {}'.format(object),
+           yscale='log')
     ax.legend()
     fig.savefig('{}/{}_FFD.png'.format(save_path, object.replace(' ', '_')))
     plt.close(fig)
