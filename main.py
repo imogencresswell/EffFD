@@ -98,6 +98,9 @@ def main():
         for lc_path in lc_path_list:
             ut.analyze_lc(star, lc_path)
 
+        flares_path_list = glob.glob(os.path.join(star_path, '*.ecsv'))
+        ut.generate_ffd(star, flares_path_list)
+
         print('Operations for {} finished.\n'.format(star))
 
 
