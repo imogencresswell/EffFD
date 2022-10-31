@@ -38,24 +38,25 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
         lc = result.download()
         lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
 
-        ### Leaving the older way of getting the LC from the pixel file
-        ### for a bit.
+        # Leaving the older way of getting the LC from the pixel file
+        # for a bit.
+        #
         # pixelfile = search_result[window].download()
         # lc = pixelfile.to_lightcurve(aperture_mask='all')
         # lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
-
-        plt.figure()
-        lc.plot()
 
         save_string = '{}/{}_{}'.format(save_path,
                                         object.replace(' ', '_'),
                                         result[0].mission[0][-2:])  # sector
         lc.to_csv(save_string+'.csv', overwrite=True)
+
+        plt.figure()
+        lc.plot()
         plt.savefig(save_string+'.png')
         plt.close()
 
 
-def analyze_lc(object, csv_path):
+def analyze_lc(csv_path):
     """Note: currently this creates toy data for each light curve
     inputted. The main flare-finding routine is based on a not-yet-published
     paper, and we are not able to share it. We have plans to implement other
@@ -76,3 +77,35 @@ def analyze_lc(object, csv_path):
 
     save_path = csv_path.replace('.csv', '_flares.ecsv')
     flare_tbl.write(save_path, overwrite=True)
+
+
+def generate_ffd(object, save_path, list_of_paths):
+    monitoring_time = 0.0
+    flare_energy = np.array([])
+
+    for file_path in list_of_paths:
+        tbl = ascii.read(file_path, guess=False, format='ecsv')
+        monitoring_time += tbl['total_lc_time'][0]
+        flare_energy = np.append(flare_energy, tbl['energy'].value)
+
+    flare_energy.sort()
+    monitoring_time *= tbl['total_lc_time'].unit
+    monitoring_time = monitoring_time.to(u.day)
+
+    cumulative_number = np.arange(len(flare_energy)) + 1
+    flare_frequency = cumulative_number[::-1] / monitoring_time
+
+    fig, ax = plt.subplots()
+    ax.plot(np.log10(flare_energy),
+            flare_frequency,
+            marker='o',
+            color='darkcyan')
+    ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % tbl['energy'].unit,
+           ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
+           title='EFFD for {}'.format(object))
+    fig.savefig('{}/{}_FFD.png'.format(save_path, object.replace(' ', '_')))
+    plt.close(fig)
+
+    # will need to do a linear regression to find the slope of the curve, BUT
+    # we have to use the middle regime of the FFD without smaller/super
+    # flares. So, we will have to make a function to take care of that.
