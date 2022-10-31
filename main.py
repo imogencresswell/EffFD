@@ -17,10 +17,11 @@ Options:
     --savgov_sigma_cutoff=<sig>    Sigma cutoff for lc.flatten  [default: 3]
 
 """
+import os
+import glob
 from docopt import docopt
 from configparser import ConfigParser
 from pathlib import Path
-import os
 import utils as ut
 
 
@@ -31,6 +32,7 @@ def main():
     #
     # Reads in arguments from config file or command line.
     # Also allows x = True commands.
+    print('Loading parameters...')
     args = docopt(__doc__)
     if args['<config>'] is not None:
         config_file = Path(args['<config>'])
@@ -77,7 +79,7 @@ def main():
             else:
                 teff_low, teff_high = ut.get_spectral_temp(spectral_type)
 
-        # IT: astroquery search for list of stars by temperature range.
+        # IT: put astroquery search for list of stars by temperature range.
         # Use the updated TESS catalogue "IV/39/tic82".
         # Can you also look if there is any qualifier for 'flaring' stars?
         # It would cut the run time down a lot. We should leave it as an
@@ -110,7 +112,13 @@ def main():
                            int(args['--savgov_sigma_cutoff']))
         except FileNotFoundError:
             print('No search results found for {}.'.format(star))
+            print('Continuing on...\n')
             os.rmdir(star_path)
+            continue
+
+        lc_path_list = glob.glob(os.path.join(star_path, '*.csv'))
+        for lc_path in lc_path_list:
+            ut.analyze_lc(star, lc_path)
 
         print('Operations for {} finished.\n'.format(star))
 
