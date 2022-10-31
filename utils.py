@@ -79,7 +79,7 @@ def analyze_lc(csv_path):
 
     # Toy data input for now
     flare_tbl = Table()
-    flare_tbl['energy'] = np.random.choice(range(1,5000),
+    flare_tbl['energy'] = np.random.choice(range(1, 5000),
                                            size=20,
                                            replace=False) * 1e29 * u.erg
     flare_tbl['total_lc_time'] = len(lc['time']) * 120.0 * u.second
