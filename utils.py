@@ -22,7 +22,7 @@ def get_spectral_temp(classification):
 def save_raw_lc(object, save_path, filter_iter, filter_sig):
     # function that saves lightkurve image and csv file
 
-    # Note SPOC is the TESS data pipeline
+    # Note SPOC == TESS data pipeline
     search_result = lk.search_targetpixelfile(object, author='SPOC')
     if not search_result:
         raise FileNotFoundError('No results for {}.'.format(object))
