@@ -3,19 +3,19 @@ import matplotlib.pyplot as plt
 
 
 def get_spectral_temp(classification):
-    if classification=='M':
+    if classification == 'M':
         return 2000, 3500  # low temp limit, high temp limit, in K
-    elif classification=='K':
+    elif classification == 'K':
         return 3500, 5000
-    elif classification=='G':
+    elif classification == 'G':
         return 5000, 6000
-    elif classification=='F':
+    elif classification == 'F':
         return 6000, 7500
-    elif classification=='A':
+    elif classification == 'A':
         return 7500, 10000
-    elif classification=='B':
+    elif classification == 'B':
         return 10000, 30000
-    elif classification=='O':
+    elif classification == 'O':
         return 30000, 60000
 
 

@@ -10,8 +10,8 @@ Options:
 
     --star_names=<star>            Names of stars
     --spectral_type=<type>         Spectral type to search for stars
-    --teff_low=<temp>              Lower limit of Teff to search [default: 2000]
-    --teff_high=<temp>             Lower limit of Teff to search [default: 3500]
+    --teff_low=<temp>              Low Teff limit to search [default: 2000]
+    --teff_high=<temp>             High Teff limit to search [default: 3500]
 
     --savgov_iterations=<iter>     Iterations for lc.flatten  [default: 9]
     --savgov_sigma_cutoff=<sig>    Sigma cutoff for lc.flatten  [default: 3]
@@ -87,7 +87,6 @@ def main():
         # of what percentage of the catalogue this covers.
         star_names_list = []
 
-
     print('\n###############################')
     print('Starting individual star search')
     print('###############################\n')
@@ -106,9 +105,9 @@ def main():
 
         try:  # Keeps program running if a star name is not searchable
             ut.save_raw_lc(star,
-                        star_path,
-                        int(args['--savgov_iterations']),
-                        int(args['--savgov_sigma_cutoff']))
+                           star_path,
+                           int(args['--savgov_iterations']),
+                           int(args['--savgov_sigma_cutoff']))
         except FileNotFoundError:
             print('No search results found for {}.'.format(star))
             os.rmdir(star_path)
