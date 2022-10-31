@@ -26,7 +26,7 @@ def get_spectral_temp(classification):
 def save_raw_lc(object, save_path, filter_iter, filter_sig):
     # function that saves lightkurve image and csv file
 
-    # Note SPOC == TESS data pipeline
+    # SPOC == TESS data pipeline
     # Getting only the 120 second exposure light curves for consistency
     search_result = lk.search_lightcurve(object, author='SPOC', exptime=120)
     if not search_result:
@@ -47,7 +47,7 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
 
         save_string = '{}/{}_{}'.format(save_path,
                                         object.replace(' ', '_'),
-                                        result[0].mission[0][-2:])
+                                        result[0].mission[0][-2:])  # sector
         lc.to_csv(save_string+'.csv', overwrite=True)
         plt.savefig(save_string+'.png')
         plt.close()
@@ -67,9 +67,10 @@ def analyze_lc(object, csv_path):
     # FLARE FINDING METHOD GOES HERE
     #
 
-    flare_tbl = Table()
     # Toy data input
+    flare_tbl = Table()
     flare_tbl['energy'] = np.random.randint(1, 300, size=30) * 1e29 * u.erg
+    flare_tbl['total_time'] = len(lc['time']) * 120.0 * u.second
 
     save_path = csv_path.replace('.csv', '_flares.ecsv')
     flare_tbl.write(save_path, overwrite=True)
