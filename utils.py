@@ -44,13 +44,13 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
         # lc = pixelfile.to_lightcurve(aperture_mask='all')
         # lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
 
-        plt.figure()
-        lc.plot()
-
         save_string = '{}/{}_{}'.format(save_path,
                                         object.replace(' ', '_'),
                                         result[0].mission[0][-2:])  # sector
         lc.to_csv(save_string+'.csv', overwrite=True)
+
+        plt.figure()
+        lc.plot()
         plt.savefig(save_string+'.png')
         plt.close()
 
@@ -99,7 +99,7 @@ def generate_ffd(object, save_path, list_of_paths):
     ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$',
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
            title='EFFD for {}'.format(object))
-    fig.savefig('{}/{}_FFD.png'.format{save_path, object.replace(' ', '_')})
+    fig.savefig('{}/{}_FFD.png'.format(save_path, object.replace(' ', '_')))
     plt.close(fig)
 
     # will need to do a linear regression to find the slope of the curve, BUT
