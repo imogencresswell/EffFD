@@ -86,17 +86,20 @@ def generate_ffd(object, save_path, list_of_paths):
         tbl = ascii.read(file_path, guess=False, format='ecsv')
         monitoring_time += tbl['total_lc_time'][0]
         flare_energy = np.append(flare_energy, tbl['energy'].value)
+
     flare_energy.sort()
+    monitoring_time *= tbl['total_lc_time'].unit
+    monitoring_time = monitoring_time.to(u.day)
 
     cumulative_number = np.arange(len(flare_energy)) + 1
-    flare_frequency = cumulative_number / monitoring_time
+    flare_frequency = cumulative_number[::-1] / monitoring_time
 
     fig, ax = plt.subplots()
     ax.plot(np.log10(flare_energy),
             flare_frequency,
             marker='o',
             color='darkcyan')
-    ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$',
+    ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % tbl['energy'].unit,
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
            title='EFFD for {}'.format(object))
     fig.savefig('{}/{}_FFD.png'.format(save_path, object.replace(' ', '_')))
