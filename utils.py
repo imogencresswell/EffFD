@@ -98,8 +98,10 @@ def generate_ffd(object, save_path, list_of_paths):
     flare_frequency = cumulative_number[::-1] / monitoring_time
 
     # Will need some linear regression to give
-    # FitX, FitY =
-    # slope, slope_err =
+    fitx = []
+    fity = []
+    slope = 0.0
+    slope_err = 0.0
     # BUT it has to be for the middle FFD regime, not small/super flares
 
     fig, ax = plt.subplots()
@@ -107,10 +109,10 @@ def generate_ffd(object, save_path, list_of_paths):
             flare_frequency,
             marker='o',
             color='darkcyan')
-    # ax.plot(FitX,
-    #         FitY,
-    #         color='skyblue',
-    #         label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
+    ax.plot(fitx,
+            fity,
+            color='skyblue',
+            label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
     ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % tbl['energy'].unit,
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
            title='EFFD for {}'.format(object))
