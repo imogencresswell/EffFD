@@ -17,52 +17,18 @@ Options:
     --savgov_sigma_cutoff=<sig>    Sigma cutoff for lc.flatten  [default: 3]
 
 """
-import numpy as np
-import lightkurve as lk
-import matplotlib.pyplot as plt
 from docopt import docopt
 from configparser import ConfigParser
 from pathlib import Path
-import csv
 import os
-
-
-def get_spectral_temp(classification):
-    if classification=='M':
-        return 2000, 3500  # low temp limit, high temp limit, in K
-    elif classification=='K':
-        return 3500, 5000
-    elif classification=='G':
-        return 5000, 6000
-    elif classification=='F':
-        return 6000, 7500
-    elif classification=='A':
-        return 7500, 10000
-    elif classification=='B':
-        return 10000, 30000
-    elif classification=='O':
-        return 30000, 60000
-
-
-def save_raw_lc(object, save_path, filter_iter, filter_sig):
-    # function that saves lightkurve image and csv file
-    search_result = lk.search_targetpixelfile(object)
-    if not search_result:
-        raise FileNotFoundError('No results for {}.'.format(object))
-
-    pixelfile = search_result[2].download()
-    lc = pixelfile.to_lightcurve(aperture_mask='all')
-    lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
-
-    plt.figure()
-    lc.plot()
-
-    save_string = save_path + '/' + object.replace(' ', '_')
-    lc.to_csv(save_string+'.csv', overwrite=True)
-    plt.savefig(save_string+'.png')
+import utils as ut
 
 
 def main():
+    # IT: What about having a function that auto-gens a config file if one
+    # one doesn't exist? It could have all the options, with most commented
+    # out?
+    #
     # Reads in arguments from config file or command line.
     # Also allows x = True commands.
     args = docopt(__doc__)
@@ -76,14 +42,20 @@ def main():
                     if v == 'true':
                         v = True
                     args[k] = v
-    #print(args)
 
     # PROBEMS/QUERIES:
 
     # TODO:
-    # Need to figure out what the index means in search target pixel file..
+    # IC: Need to figure out what the index means in search target pixel file.
     # could use download all but takes forever,
     # should be a user input but idk what it is.
+    #
+    # IT: Pretty sure it's the different times the star was observed.
+    # We'll have to loop through them and add the result tables
+    # together, though we could probably keep the figures separate.
+    # We could also work on the LC separately and combine the numbers at the
+    # point of making the FFD (combine flare energy tables and add together
+    # total time)
 
     if args['--star_names'] is not None:
         star_names = str(args['--star_names'])
@@ -103,16 +75,27 @@ def main():
                 raise ValueError('Please use spectral type in OBAFGKM.')
 
             else:
-                teff_low, teff_high = get_spectral_temp(spectral_type)
+                teff_low, teff_high = ut.get_spectral_temp(spectral_type)
 
-        # -- Astroquery search for list of stars by temperature
+        # IT: astroquery search for list of stars by temperature range.
+        # Use the updated TESS catalogue "IV/39/tic82".
+        # Can you also look if there is any qualifier for 'flaring' stars?
+        # It would cut the run time down a lot. We should leave it as an
+        # option though for people who want to look at non-flaring stars to
+        # see if anything comes up.
+        # Not all stars have Teff, so we might want to find some metric
+        # of what percentage of the catalogue this covers.
         star_names_list = []
 
 
     print('\n###############################')
     print('Starting individual star search')
     print('###############################\n')
-    for star in star_names_list:
+    for placement, star in enumerate(star_names_list):
+        print('Starting on {} ({}/{}).'.format(star,
+                                               placement+1,
+                                               len(star_names_list)))
+
         star_path = os.path.join(str(args['--root_dir']),
                                  star.replace(' ', '_'))
 
@@ -122,7 +105,7 @@ def main():
             print('A folder for {} already exists.'.format(star))
 
         try:  # Keeps program running if a star name is not searchable
-            save_raw_lc(star,
+            ut.save_raw_lc(star,
                         star_path,
                         int(args['--savgov_iterations']),
                         int(args['--savgov_sigma_cutoff']))
