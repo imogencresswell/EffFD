@@ -1,4 +1,5 @@
 import os
+import urllib.request
 import numpy as np
 import lightkurve as lk
 import matplotlib.pyplot as plt
@@ -28,9 +29,29 @@ def get_spectral_temp(classification):
         raise ValueError('Improper spectral type given.')
 
 
-def call_tess_catalog_names(search_dir, Tmin, Tmax):
+def save_sector_list(sector, search_path):
+    save_string = search_path+'sector{}.csv'.format(sector)
+    if not os.path.isfile(save_string):
+        print('Downloading Sector {} observation list.'.format(sector))
+        url = "https://tess.mit.edu/wp-content/uploads/all_targets_S{}_v1.csv".format(sector.zfill(3))  # noqa
+        urllib.request.urlretrieve(url, save_string)
+
+
+def build_names_from_sectors(sector_list, search_path):
+    names_array = np.array([])
+    for sector in sector_list:
+        curr_csv = np.genfromtxt(search_path+'sector{}.csv'.format(sector),
+                                 delimiter=',',
+                                 skip_header=6)
+        names_array = np.append(names_array, curr_csv[:,0])
+    names_list = names_array.astype(int).astype(str).tolist()
+    tess_names_list = ['TIC '+name for name in names_list]
+    return tess_names_list
+
+
+def call_tess_catalog_names(search_path, Tmin, Tmax):
     T_str = '{}..{}'.format(Tmin, Tmax)
-    save_path = search_dir + T_str + '.csv'
+    save_path = search_path + T_str + '.csv'
 
     try:
         ascii.read(save_path, guess=False, format='csv')
@@ -62,13 +83,6 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
         if os.path.isfile(save_string+'.csv'):
             print('Sector {} CSV exists for {}'.format(sector, object))
             continue
-
-        # Leaving the older way of getting the LC from the pixel file
-        # for a bit.
-        #
-        # pixelfile = search_result[window].download()
-        # lc = pixelfile.to_lightcurve(aperture_mask='all')
-        # lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
 
         lc = result.download()
         lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
