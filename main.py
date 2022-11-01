@@ -6,9 +6,11 @@ Usage:
     main.py <config> [options]
 
 Options:
-    --root_dir=<dir>               Root directory for outputs  [default: ./]
+    --out_dir=<dir>                Directory for outputs [default: ./data/]
+    --search_dir=<dir>             Folder for searches [default: ./searches/]
 
     --star_names=<star>            Names of stars
+    --sectors=<sec>                 TESS Sector to pull stars from
     --spectral_type=<type>         Spectral type to search for stars
     --teff_low=<temp>              Low Teff limit to search [default: 2000]
     --teff_high=<temp>             High Teff limit to search [default: 3500]
@@ -41,16 +43,33 @@ def main():
                         v = True
                     args[k] = v
 
+    search_dir = str(args['--search_dir'])
+    if not os.path.isdir(search_dir):
+        os.mkdir(search_dir)
+    if not os.path.isdir(str(args['--out_dir'])):
+        os.mkdir(str(args['--out_dir']))
+
     #
     # Create list of stars to search for
     #
     if args['--star_names'] is not None:
         star_names = str(args['--star_names'])
         star_names_list = list(map(str.strip, star_names.split(',')))
+
+    elif args['--sectors'] is not None:
+        sec_list = list(map(str.strip, str(args['--sectors']).split(',')))
+
+        for sec in sec_list:
+            ut.save_sector_list(sec, search_dir)
+        star_names_list = ut.build_names_from_sectors(sec_list, search_dir)
+
     else:
         # Uses temperature-range star search if no names/spectral_type given
-        teff_low = int(args['--teff_low'])
-        teff_high = int(args['--teff_high'])
+        try:
+            teff_low = int(args['--teff_low'])
+            teff_high = int(args['--teff_high'])
+        except TypeError:
+            raise TypeError('T_eff limits must be integers.')
 
         if args['--spectral_type'] is not None:
             spectral_type = str(args['--spectral_type'])
@@ -75,7 +94,7 @@ def main():
                                                placement+1,
                                                len(star_names_list)))
 
-        star_path = os.path.join(str(args['--root_dir']),
+        star_path = os.path.join(str(args['--out_dir']),
                                  star.replace(' ', '_'))
 
         try:  # Keeps program running if folders already exist
