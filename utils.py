@@ -6,6 +6,7 @@ import astropy.units as u
 from astropy.io import ascii
 from astropy.table import Table
 from scipy.optimize import curve_fit
+from astroquery.vizier import Vizier
 
 
 def get_spectral_temp(classification):
@@ -25,6 +26,22 @@ def get_spectral_temp(classification):
         return 30000, 60000
     else:
         raise ValueError('Improper spectral type given.')
+
+
+def call_tess_catalog_names(search_dir, Tmin, Tmax):
+    T_str = '{}..{}'.format(Tmin, Tmax)
+    save_path = search_dir + T_str + '.csv'
+
+    try:
+        ascii.read(save_path, guess=False, format='csv')
+    except FileNotFoundError:
+        v = Vizier(columns=['TIC', '_RAJ2000', '_DEJ2000'],
+                   catalog="IV/39/tic82",
+                   row_limit=-1,
+                   timeout=300)
+        cat = v.query_constraints(Teff = T_str)[0]
+
+        cat.write(save_path)
 
 
 def save_raw_lc(object, save_path, filter_iter, filter_sig):
@@ -92,13 +109,13 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
     dx = np.diff(x, 1)
     dy = np.diff(y, 1)
     yfirst = dy / dx
-    condition = np.where((yfirst > min_slope) & (yfirst < max_slope))[0]
+    cond = np.where((yfirst > min_slope) & (yfirst < max_slope))[0]
 
-    for idx, place in enumerate(condition):
-        if place - condition[idx+1] <= 2:
-            starting_idx = place + 1
+    for idx, pla in enumerate(cond):
+        if pla-cond[idx+1] <= 2 and cond[idx+3]-cond[idx+2] <= 2:
+            starting_idx = pla + 1
             break
-    ending_idx = condition[-1] - 1
+    ending_idx = cond[-1] - 1
 
     new_x = x[starting_idx:ending_idx]
     new_y = y[starting_idx:ending_idx]
@@ -118,22 +135,24 @@ def calculate_slope_powerlaw(x, y):
 
 
 def generate_ffd(object, save_path, list_of_paths):
-    monitoring_time = 0.0
+    monitoring_time = 0.0 * u.day
     flare_energy = np.array([])
 
     for file_path in list_of_paths:
         tbl = ascii.read(file_path, guess=False, format='ecsv')
-        monitoring_time += tbl['total_lc_time'][0]
+        monitoring_time += tbl['total_lc_time'][0] \
+                           * (1.0 * tbl['total_lc_time'].unit).to(u.day)
         flare_energy = np.append(flare_energy, tbl['energy'].value)
+
+    # THIS IS FOR THE TOY DATA ONLY - TO BE REMOVED
+    flare_energy = np.unique(flare_energy)
+    # END OF TOY DATA PART
 
     flare_energy.sort()
     log_energy = np.log10(flare_energy)
 
-    monitoring_time *= tbl['total_lc_time'].unit
-    monitoring_time = monitoring_time.to(u.day)
-
-    cumulative_number = np.arange(len(flare_energy)) + 1
-    flare_frequency = cumulative_number[::-1] / monitoring_time.value
+    cumulative_count = np.arange(len(flare_energy)) + 1
+    flare_frequency = cumulative_count[::-1] / monitoring_time.value
     log_frequency = np.log10(flare_frequency)
 
     # linear regression to get slope
