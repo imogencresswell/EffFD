@@ -234,7 +234,7 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
     new_y : Cumulative frequency array within middle regime
 
     """
-    if not isintance(x, np.array) or isinstance(y, np.array):
+    if not isinstance(x, np.ndarray) or not isinstance(y, np.ndarray):
         raise TypeError('x and y must be numpy array')
         
     dx = np.diff(x, 1)
@@ -278,7 +278,7 @@ def calculate_slope_powerlaw(x, y):
     b_err : error on slope
 
     """
-    if not isinstance(x, np.array) or isinstance(y, np.array):
+    if not isinstance(x, np.ndarray) or not isinstance(y, np.ndarray):
         raise TypeError('x and y must be numpy array')
     
     solution = curve_fit(func_powerlaw, x, y, maxfev=2000)
@@ -317,15 +317,16 @@ def get_time_and_energy(paths):
     for file_path in paths:
         if type(file_path) is not str:
             raise TypeError('object path must be a string')
-            try:
-                tbl = ascii.read(file_path, guess=False, format='ecsv')
-                time += tbl['total_lc_time'][0] \
-                           * (1.0 * tbl['total_lc_time'].unit).to(u.day)
-                flare_eng = np.append(flare_eng, tbl['energy'].value)
-            except:
-                print('Flare filepath '+file_path+' not found')
-                continue
-    return time, flare_eng
+        try:
+            tbl = ascii.read(file_path, guess=False, format='ecsv')
+            time += tbl['total_lc_time'][0] \
+                       * (1.0 * tbl['total_lc_time'].unit).to(u.day)
+            flare_eng = np.append(flare_eng, tbl['energy'].value)
+        except FileNotFoundError:
+            print('Flare filepath '+file_path+' not found')
+            continue
+    flare_eng.sort()
+    return time, flare_eng, tbl['energy'].unit
     
 
 
@@ -373,17 +374,17 @@ def generate_ffd(object, save_path, list_of_paths):
     Figure of FFD for the object
 
     """
-    monitoring_time, flare_energy = get_time_and_energy(list_of_paths)
-    
+    monitoring_time, flare_energy, e_unit = get_time_and_energy(list_of_paths)
+    print(monitoring_time, flare_energy)
     # THIS IS FOR THE TOY DATA ONLY - TO BE REMOVED
     flare_energy = np.unique(flare_energy)
     # END OF TOY DATA PART
 
-    log_energy, log_frequency = get_log_freq(flare_energy.sort(),
+    log_energy, log_frequency = get_log_freq(flare_energy,
                                 monitoring_time.value)
     
-
-
+    print(log_energy, log_frequency)
+    
     # linear regression to get slope
     m_ene, m_fre = get_middle_ffd_regime(log_energy, log_frequency)
     intercept, slope, slope_err = calculate_slope_powerlaw(m_ene, m_fre)
@@ -391,14 +392,14 @@ def generate_ffd(object, save_path, list_of_paths):
 
     fig, ax = plt.subplots()
     ax.plot(log_energy,
-            flare_frequency,
+            10**log_frequency,
             marker='o',
             color='skyblue')
     ax.plot(m_ene,
             10**func_powerlaw(m_ene, intercept, slope),
             color='black',
             label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
-    ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % tbl['energy'].unit,
+    ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % e_unit,
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
            title='EFFD for {}'.format(object),
            yscale='log')
