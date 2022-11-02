@@ -49,7 +49,7 @@ def save_sector_list(sector, search_path):
     ----------
     sector : str
         TESS sector to search for
-    
+
     search_path: str
         path to search directory where
         previous queries are saved
@@ -73,7 +73,7 @@ def build_names_from_sectors(sector_list, search_path):
     ----------
     sector_list : list of strings
         List TESS sectors to search through
-    
+
     search_path: str
         Path to search directory where
         previous queries are saved
@@ -88,7 +88,7 @@ def build_names_from_sectors(sector_list, search_path):
         curr_csv = np.genfromtxt(search_path+'sector{}.csv'.format(sector),
                                  delimiter=',',
                                  skip_header=6)
-        names_array = np.append(names_array, curr_csv[:,0])
+        names_array = np.append(names_array, curr_csv[:, 0])
     names_list = names_array.astype(int).astype(str).tolist()
     tess_names_list = ['TIC '+name for name in names_list]
     return tess_names_list
@@ -103,10 +103,10 @@ def call_tess_catalog_names(search_path, Tmin, Tmax):
     ----------
     Tmin : int
         Minimum temperature
-    
+
     Tmax : int
         Maximum temperature
-    
+
     search_path: string
         path to search directory where
         previous queries are saved
@@ -127,7 +127,7 @@ def call_tess_catalog_names(search_path, Tmin, Tmax):
                    catalog="IV/39/tic82",
                    row_limit=-1,
                    timeout=300)
-        cat = v.query_constraints(Teff = T_str)[0]
+        cat = v.query_constraints(Teff=T_str)[0]
 
         cat.write(save_path)
 
@@ -139,14 +139,14 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
     ----------
     object : str
         TESS object
-    
+
     save_path : str
         path to the save directory
-    
+
     filter_iter: int
         number of iterations that lightkurve
         smooths data over
-    
+
     filter_sigma: float
         statistical sigma at which lightkurve
         cuts off data
@@ -218,13 +218,13 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
     ----------
     x : numpy array
         Energy array
-    
+
     y : numpy array
         Cumulative frequency array
-    
+
     min_slope: float
         minimum value of the slope for the condition
-    
+
     max_slope: float
         maximum value of the slope for the condition
 
@@ -236,16 +236,16 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
     """
     if not isinstance(x, np.ndarray) or not isinstance(y, np.ndarray):
         raise TypeError('x and y must be numpy array')
-        
+
     dx = np.diff(x, 1)
     dy = np.diff(y, 1)
     yfirst = dy / dx
-    #finds points that satisfy the slope condition for the middle regime
+    # finds points that satisfy the slope condition for the middle regime
     cond = np.where((yfirst > min_slope) & (yfirst < max_slope))[0]
     # in the first regime some points will satisfy the above condition
-    #this loop is checking that the next two points also satisfy the
-    #condition so that we only get data points in the middle regime and
-    #not rogue points from first regime
+    # this loop is checking that the next two points also satisfy the
+    # condition so that we only get data points in the middle regime and
+    # not rogue points from first regime
     for idx, pla in enumerate(cond):
         if pla-cond[idx+1] <= 2 and cond[idx+3]-cond[idx+2] <= 2:
             starting_idx = pla + 1
@@ -267,7 +267,7 @@ def calculate_slope_powerlaw(x, y):
     ----------
     x : numpy array
         x array
-    
+
     y : numpy array
         y array
 
@@ -280,7 +280,7 @@ def calculate_slope_powerlaw(x, y):
     """
     if not isinstance(x, np.ndarray) or not isinstance(y, np.ndarray):
         raise TypeError('x and y must be numpy array')
-    
+
     solution = curve_fit(func_powerlaw, x, y, maxfev=2000)
     a = solution[0][0]
     b = solution[0][1]
@@ -301,7 +301,7 @@ def get_time_and_energy(paths):
         was observed in multiple TESS sectors
         there will be multiple paths, otherwise
         it will be a single filepath
-    
+
     Returns
     -------
     time : total time TESS observed the object
@@ -310,8 +310,7 @@ def get_time_and_energy(paths):
     """
     if not paths:
         raise ValueError('List of paths is empty')
-        
-    
+
     time = 0.0 * u.day
     flare_eng = np.array([])
     for file_path in paths:
@@ -319,15 +318,14 @@ def get_time_and_energy(paths):
             raise TypeError('object path must be a string')
         try:
             tbl = ascii.read(file_path, guess=False, format='ecsv')
-            time += tbl['total_lc_time'][0] \
-                       * (1.0 * tbl['total_lc_time'].unit).to(u.day)
+            time += tbl['total_lc_time'][0] * \
+                (1.0 * tbl['total_lc_time'].unit).to(u.day)
             flare_eng = np.append(flare_eng, tbl['energy'].value)
         except FileNotFoundError:
             print('Flare filepath '+file_path+' not found')
             continue
     flare_eng.sort()
     return time, flare_eng, tbl['energy'].unit
-    
 
 
 def get_log_freq(flare_eng, tot_time):
@@ -337,9 +335,9 @@ def get_log_freq(flare_eng, tot_time):
     ----------
     flare_eng : array
        array of flare energy
-    
+
     tot_time: total time TESS observed the object
-    
+
     Returns
     -------
     time : list of times that a flare occurred
@@ -351,40 +349,38 @@ def get_log_freq(flare_eng, tot_time):
     flare_frequency = cumulative_count[::-1] / tot_time
     frequency = np.log10(flare_frequency)
     return energy, frequency
-    
-    
+
+
 def generate_ffd(object, save_path, list_of_paths):
     """This function generates and saves the FFD
     Parameters
     ----------
     object : str
        Name of object
-    
+
     save_path: str
         Path to save directory
-    
+
     list_of_paths: list of str
         Path to object data, if the object
         was observed in multiple TESS sectors
         there will be multiple paths, otherwise
         it will be a single filepath
-    
+
     Returns
     -------
     Figure of FFD for the object
 
     """
     monitoring_time, flare_energy, e_unit = get_time_and_energy(list_of_paths)
-    print(monitoring_time, flare_energy)
+
     # THIS IS FOR THE TOY DATA ONLY - TO BE REMOVED
     flare_energy = np.unique(flare_energy)
     # END OF TOY DATA PART
 
     log_energy, log_frequency = get_log_freq(flare_energy,
-                                monitoring_time.value)
-    
-    print(log_energy, log_frequency)
-    
+                                             monitoring_time.value)
+
     # linear regression to get slope
     m_ene, m_fre = get_middle_ffd_regime(log_energy, log_frequency)
     intercept, slope, slope_err = calculate_slope_powerlaw(m_ene, m_fre)

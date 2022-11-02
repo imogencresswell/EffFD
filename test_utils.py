@@ -25,35 +25,39 @@ class TestDataProcessor(unittest.TestCase):
         self.assertRaises(ValueError, ut.get_spectral_temp, 10)
 
     def test_get_middle_ffd_regime(self):
-        self.assertTrue(len(self.re_x) <= len(self.x) and
-                        len(self.re_y) <= len(self.y))
-        self.assertFalse(len(self.re_x) > len(self.x) and
-                         len(self.re_y) > len(self.y))
-        # self.assertRaises(TypeError, ut.get_middle_ffd_regime, [5,4], [2,2])
-        # self.assertRaises(TypeError, ut.get_middle_ffd_regime, 'banana', 'Y')
-        # self.assertRaises(TypeError, ut.get_middle_ffd_regime, 10.0, 20.0)
+        self.assertTrue(len(self.re_x) <= len(self.lo_x) and
+                        len(self.re_y) <= len(self.lo_y))
+        self.assertFalse(len(self.re_x) > len(self.lo_x) and
+                         len(self.re_y) > len(self.lo_y))
+        self.assertRaises(TypeError, ut.get_middle_ffd_regime, [5, 4], [2, 2])
+        self.assertRaises(TypeError, ut.get_middle_ffd_regime, 'banana', 'Y')
+        self.assertRaises(TypeError, ut.get_middle_ffd_regime, 10.0, 20.0)
 
     def test_calculate_slope_powerlaw(self):
         intercept, slope, slope_err = ut.calculate_slope_powerlaw(self.re_x,
                                                                   self.re_y)
-        # self.assertTrue(slope > slope_err)
+        self.assertTrue(np.abs(slope) > slope_err)
         self.assertTrue(slope <= -0.4 and slope >= -2.0)
         self.assertFalse(slope > -0.4 and slope < -2.0)
-        # self.assertRaises(TypeError, ut.calculate_slope_powerlaw, [5,4], [2])
-        # self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 'ban', 'Y')
-        # self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 10.0, 20.0)
+        self.assertRaises(TypeError, ut.calculate_slope_powerlaw, [5, 4], [2])
+        self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 'ban', 'Y')
+        self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 10.0, 20.0)
+
+    def test_get_log_freq(self):
+        self.assertTrue((self.lo_y == np.log10(self.y)).all())
+        self.assertFalse((self.lo_y != np.log10(self.y)).all())
+
+    def test_get_time_and_energy(self):
+        self.assertRaises(ValueError, ut.get_time_and_energy, [])
+        self.assertRaises(TypeError, ut.get_time_and_energy, [-1, 1.0])
 
     def setUp(self):
         # Generate fake FFD data, as is done in utils.py
-        self.y = np.unique(np.random.choice(range(1, 5000),
-                                            size=100,
-                                            replace=False))
+        self.y = np.unique(np.random.choice(range(1, 5000), size=100))
         self.y.sort()
-        self.x = np.arange(len(self.y))[::-1] + 1
-
-        # Get only the middle section of the FFD
-        self.re_x, self.re_y = ut.get_middle_ffd_regime(np.log10(self.x),
-                                                        np.log10(self.y))
+        # self.x = np.arange(len(self.y))[::-1] + 1
+        self.lo_y, self.lo_x = ut.get_log_freq(self.y, 80.0)
+        self.re_x, self.re_y = ut.get_middle_ffd_regime(self.lo_x, self.lo_y)
 
     def tearDown(self):
         self.x = 0
