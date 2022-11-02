@@ -44,8 +44,15 @@ def main():
                     args[k] = v
 
     search_dir = str(args['--search_dir'])
+    #Checks if search directory exists, if not
+    # it creates one
+   
+    #Data from previous sectors is saved in the search
+    # directory to avoid searching for the same object again
     if not os.path.isdir(search_dir):
         os.mkdir(search_dir)
+    #Checks if output directory exists, if not
+    # it creastes one
     if not os.path.isdir(str(args['--out_dir'])):
         os.mkdir(str(args['--out_dir']))
 
@@ -55,7 +62,8 @@ def main():
     if args['--star_names'] is not None:
         star_names = str(args['--star_names'])
         star_names_list = list(map(str.strip, star_names.split(',')))
-
+    
+    # Creates a list of TESS sectors to search
     elif args['--sectors'] is not None:
         sec_list = list(map(str.strip, str(args['--sectors']).split(',')))
 
@@ -112,11 +120,12 @@ def main():
             print('Continuing on...\n')
             os.rmdir(star_path)
             continue
-
+        
         lc_path_list = glob.glob(os.path.join(star_path, '*.csv'))
         for lc_path in lc_path_list:
             ut.analyze_lc(lc_path)
-
+        #This combines flare data if the object was observed in multiple
+        #sectors
         flares_path_list = glob.glob(os.path.join(star_path, '*.ecsv'))
         ut.generate_ffd(star, star_path, flares_path_list)
 
