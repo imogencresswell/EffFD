@@ -202,8 +202,8 @@ def analyze_lc(csv_path):
 
     # Toy data input for now
     flare_tbl = Table()
-    #any u.unit converts the data into the correct
-    #astrophysical unit
+    # any u.unit converts the data into the correct
+    # astrophysical unit
     flare_tbl['energy'] = np.random.choice(range(1, 5000),
                                            size=20,
                                            replace=False) * 1e29 * u.erg
