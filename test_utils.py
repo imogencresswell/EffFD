@@ -1,5 +1,9 @@
-"""This tests the functions in utils.py to make sure they can handle different
-situations where inputs cannot be found.
+"""This tests the functions in utils.py
+
+General goals:
+- Check that functions require proper input types or raise errors for
+  inputs that do not make sense
+- Check that expected trends are returned given random data
 
 """
 import sys
@@ -40,7 +44,6 @@ class TestDataProcessor(unittest.TestCase):
         # self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 10.0, 20.0)
 
     def setUp(self):
-
         # Generate fake FFD data, as is done in utils.py
         self.y = np.unique(np.random.choice(range(1, 5000),
                                             size=100,
