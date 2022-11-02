@@ -13,8 +13,7 @@ On software, many astronomers write their own codes from scratch for every proje
     - Pretty sure it's the different times the star was observed. We'll have to loop through them and add the result tables together, though we could probably keep the figures separate. We could also work on the LC separately and combine the numbers at the point of making the FFD (combine flare energy tables and add together total time)
 - Need to put astroquery search for list of stars by temperature range. Use the updated TESS catalogue "IV/39/tic82". Is there a qualifier for 'flaring' stars? It would cut the run time down a lot. If so, we should leave it as an option though for people who want to look at non-flaring stars to see if anything comes up. Not all stars have Teff, so we might want to find some metric of what percentage of the catalogue this covers.
     - We should use the identifiers in the 'TIC' column. 'GAIA' name might also be useful, if we need to cross-reference a star later on, but I'm not sure how we would store it neatly.
-- Do we need to split the current functions up more? Especially `generate_ffd()`?
-- What could be some functional and unit tests?
+- More unit tests?
 
 ## Potential To-do
 - We have a general way of selecting the middle regime of the FFD, but it would be better to test this against real data to see how it holds up and possibly figure out a more rigorous algorithm. This one is decently simple to explain, though, so if tests against real data come out fine, it could be something to stick with.
