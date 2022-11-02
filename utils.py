@@ -373,7 +373,6 @@ def generate_ffd(object, save_path, list_of_paths):
 
     """
     monitoring_time, flare_energy, e_unit = get_time_and_energy(list_of_paths)
-    print(monitoring_time, flare_energy)
 
     # THIS IS FOR THE TOY DATA ONLY - TO BE REMOVED
     flare_energy = np.unique(flare_energy)
@@ -381,8 +380,6 @@ def generate_ffd(object, save_path, list_of_paths):
 
     log_energy, log_frequency = get_log_freq(flare_energy,
                                              monitoring_time.value)
-
-    print(log_energy, log_frequency)
 
     # linear regression to get slope
     m_ene, m_fre = get_middle_ffd_regime(log_energy, log_frequency)
