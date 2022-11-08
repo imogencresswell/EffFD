@@ -59,7 +59,7 @@ def main():
 
     # Download all sectors
     # and create table of all TESS stars with temperatures
-    if args['--build_star_table'] == True:
+    if args['--build_star_table'] is True:
 
         if os.path.isfile(search_dir + 'all_stars_table.csv'):
             print('WARNING: Table containing temperature for all TESS stars')
