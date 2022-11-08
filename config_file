@@ -7,4 +7,4 @@ star_names = ZZ Top, LHS 3844 b, AU Mic
 # spectral_type = K
 # teff_low = 2000
 # teff_high = 3500
-# build_star_table = True
+build_star_table = True

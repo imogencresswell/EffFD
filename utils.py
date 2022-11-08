@@ -65,9 +65,12 @@ def save_sector(sector, search_path):
     """
     save_string = search_path+'sector{}.csv'.format(sector)
     if not os.path.isfile(save_string):
-        print('Downloading Sector {} observation list.'.format(sector))
-        url = "https://tess.mit.edu/wp-content/uploads/all_targets_S{}_v1.csv".format(sector.zfill(3))  # nopep8
-        urllib.request.urlretrieve(url, save_string)
+        try:
+            print('Downloading Sector {} observation list.'.format(sector))
+            url = "https://tess.mit.edu/wp-content/uploads/all_targets_S{}_v1.csv".format(sector.zfill(3))  # nopep8
+            urllib.request.urlretrieve(url, save_string)
+        except urllib.error.HTTPError:
+            raise ValueError('Inputted URL could not be found.')
 
 
 def build_names_from_sectors(sector_list, search_path):
@@ -98,6 +101,18 @@ def build_names_from_sectors(sector_list, search_path):
     tess_names_list = ['TIC ' + name for name in names_list]
     return tess_names_list
 
+
+def build_all_stars_table(objects):
+    # FOR LOOP THAT GOES THROUGH EACH STAR, SEARCHES USING ASTROQUERY
+    # FOR THE TESS CATALOG FOR THE STAR NAME AND SAVES DATA IF
+    # T_EFF EXISTS & 'S/G' == 'STAR'
+    #
+    # Can astroquery take a list? If so, would be much faster to just
+    # pull those stars straight from there.
+    # -- I don't think it can
+    for object in objects:
+
+        _ = 0
 
 def call_tess_catalog_names(search_path, Tmin, Tmax):
     """Function that uses Vizier query to seach through

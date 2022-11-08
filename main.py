@@ -24,7 +24,6 @@ Options:
 import os
 import sys
 import glob
-import urllib
 import utils as ut
 from pathlib import Path
 from docopt import docopt
@@ -60,29 +59,31 @@ def main():
 
     # Download all sector data if option is chosen
     if args['--build_star_table'] == True:
+
+        if os.path.isfile(search_dir + 'all_stars_table.csv'):
+            print('WARNING: Table containing temperature for all TESS stars')
+            print('already exists. Please delete before creating a new one.')
+            sys.exit(1)
+
         s_count = 1
         while s_count > 0:
             try:
                 ut.save_sector(str(s_count), search_dir)
                 s_count += 1
-
             # Continues until the most recent TESS sector upload
-            except urllib.error.HTTPError:
+            except ValueError:
                 s_last = s_count - 1
-                print('Sector 1-{} data downloaded.'.format(s_last))
+                print('Sector 1-{} data downloaded.\n'.format(s_last))
                 s_count = 0
-                sys.exit(0)  # NEED TO REMOVE
 
-        sec_list = list(range(s_last))
+        sec_list = list(range(1, s_last))
         all_stars = ut.build_names_from_sectors(sec_list, search_dir)
+        ut.build_all_stars_table(all_stars)
 
-        # FOR LOOP THAT GOES THROUGH EACH STAR, SEARCHES USING ASTROQUERY
-        # FOR THE TESS CATALOG FOR THE STAR NAME AND SAVES DATA IF
-        # T_EFF EXISTS & 'S/G' == 'STAR'
-        #
-        # Can astroquery take a list? If so, would be much faster to just
-        # pull those stars straight from there.
-        # -- I don't think it can
+        print('Table for all current TESS stars with temperatures created.')
+        print('This table is located in {}'.format(search_dir))
+        print('\nExiting program...\n')
+        sys.exit(0)
 
     print('\n###############################')
     print('#### Building star list... ####')
