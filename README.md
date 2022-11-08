@@ -12,6 +12,8 @@ On software, many astronomers write their own codes from scratch for every proje
 - Need to put astroquery search for list of stars by temperature range. Use the updated TESS catalogue "IV/39/tic82". Is there a qualifier for 'flaring' stars? It would cut the run time down a lot. If so, we should leave it as an option though for people who want to look at non-flaring stars to see if anything comes up. Not all stars have Teff, so we might want to find some metric of what percentage of the catalogue this covers.
     - We should use the identifiers in the 'TIC' column. 'GAIA' name might also be useful, if we need to cross-reference a star later on, but I'm not sure how we would store it neatly.
     - I worked this out, but the astroquery method takes way too long. It goes through about 2 billion 'target' stars, when TESS only looked at about 200k, so even if you waited it out, a lot would turn up empty.
+    - I made a function/option that will build a table of stars with temperatures by first getting all observed TESS sectors, then getting the unique TICs from them, search for each one in the Vizier TESS catalog, then save it if it is a STAR and it has a Teff value.
+        - It is important to keep the 'search by Sector' option because that does not care if the stars have temperatures or not. However, it would also be good if we could have it automatically reject non-star observations, but not sure if there is an easy way for that. Maybe lightkurve doesn't have non-star LCs in their Python search - something to check.
 - What kind of unit tests could we do for the functions that are mainly parsing through folders?
 
 ## Potential To-do
