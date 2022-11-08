@@ -38,11 +38,15 @@ def get_spectral_temp(classification):
         return 10000, 30000
     elif classification == 'O':
         return 30000, 60000
+    elif classification in 'L,T,Y'.split(','):
+        raise ValueError('Brown dwarfs are not yet supported.')
+    elif classification not in 'O,B,A,F,G,K,M'.split(','):
+        raise ValueError('Please use spectral type in OBAFGKM.')
     else:
         raise ValueError('Improper spectral type given.')
 
 
-def save_sector_list(sector, search_path):
+def save_sector(sector, search_path):
     """Function that retrieves data for each sector from
     TESS website
     Parameters
@@ -89,8 +93,9 @@ def build_names_from_sectors(sector_list, search_path):
                                  delimiter=',',
                                  skip_header=6)
         names_array = np.append(names_array, curr_csv[:, 0])
+    names_array = np.unique(names_array)
     names_list = names_array.astype(int).astype(str).tolist()
-    tess_names_list = ['TIC '+name for name in names_list]
+    tess_names_list = ['TIC ' + name for name in names_list]
     return tess_names_list
 
 

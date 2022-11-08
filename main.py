@@ -18,9 +18,13 @@ Options:
     --savgov_iterations=<iter>     Iterations for lc.flatten  [default: 9]
     --savgov_sigma_cutoff=<sig>    Sigma cutoff for lc.flatten  [default: 3]
 
+    --build_star_table=<bool>      Download all sector data  [default: False]
+
 """
 import os
+import sys
 import glob
+import urllib
 import utils as ut
 from pathlib import Path
 from docopt import docopt
@@ -30,7 +34,9 @@ from configparser import ConfigParser
 def main():
     # Reads in arguments from config file or command line.
     # Also allows x = True commands.
-    print('Loading parameters...')
+    print('\n###############################')
+    print('#### Loading parameters... ####')
+    print('###############################\n')
     args = docopt(__doc__)
     if args['<config>'] is not None:
         config_file = Path(args['<config>'])
@@ -39,41 +45,66 @@ def main():
         for n, v in config.items('parameters'):
             for k in args.keys():
                 if k.split('--')[-1].lower() == n:
-                    if v == 'true':
+                    if v.lower() == 'true':
                         v = True
                     args[k] = v
 
+    # Search data from selected sectors is saved to avoid re-downloads
     search_dir = str(args['--search_dir'])
-    # Checks if search directory exists, if not
-    # it creates one
-
-    # Data from previous sectors is saved in the search
-    # directory to avoid searching for the same object again
     if not os.path.isdir(search_dir):
         os.mkdir(search_dir)
-    # Checks if output directory exists, if not
-    # it creastes one
+
+    # Checks if output directory exists; create one if not
     if not os.path.isdir(str(args['--out_dir'])):
         os.mkdir(str(args['--out_dir']))
 
-    #
-    # Create list of stars to search for
-    #
+    # Download all sector data if option is chosen
+    if args['--build_star_table'] == True:
+        s_count = 1
+        while s_count > 0:
+            try:
+                ut.save_sector(str(s_count), search_dir)
+                s_count += 1
+
+            # Continues until the most recent TESS sector upload
+            except urllib.error.HTTPError:
+                s_last = s_count - 1
+                print('Sector 1-{} data downloaded.'.format(s_last))
+                s_count = 0
+                sys.exit(0)  # NEED TO REMOVE
+
+        sec_list = list(range(s_last))
+        all_stars = ut.build_names_from_sectors(sec_list, search_dir)
+
+        # FOR LOOP THAT GOES THROUGH EACH STAR, SEARCHES USING ASTROQUERY
+        # FOR THE TESS CATALOG FOR THE STAR NAME AND SAVES DATA IF
+        # T_EFF EXISTS & 'S/G' == 'STAR'
+        #
+        # Can astroquery take a list? If so, would be much faster to just
+        # pull those stars straight from there.
+        # -- I don't think it can
+
+    print('\n###############################')
+    print('#### Building star list... ####')
+    print('###############################\n')
+
+    # Creates list of stars to search for from inputs
     if args['--star_names'] is not None:
         star_names = str(args['--star_names'])
         star_names_list = list(map(str.strip, star_names.split(',')))
 
-    # Creates a list of TESS sectors to search
+    # Creates a list of stars from inputted sectors
     elif args['--sectors'] is not None:
         sec_list = list(map(str.strip, str(args['--sectors']).split(',')))
-
         for sec in sec_list:
-            ut.save_sector_list(sec, search_dir)
+            ut.save_sector(sec, search_dir)
+
         star_names_list = ut.build_names_from_sectors(sec_list, search_dir)
 
+    # This uses astroquery to search for TESS stars by temperature.
+    # Currently broken - it takes too long.
     else:
-        # Uses temperature-range star search if no names/spectral_type given
-        try:
+        try:  # Uses either defaults or user inputed numbers
             teff_low = int(args['--teff_low'])
             teff_high = int(args['--teff_high'])
         except TypeError:
@@ -81,21 +112,13 @@ def main():
 
         if args['--spectral_type'] is not None:
             spectral_type = str(args['--spectral_type'])
+            teff_low, teff_high = ut.get_spectral_temp(spectral_type)
 
-            # Error catching for unsupported types. Stop run if unsupported.
-            if spectral_type in 'L,T,Y'.split(','):
-                raise ValueError('Brown dwarfs are not yet supported.')
-            elif spectral_type not in 'O,B,A,F,G,K,M'.split(','):
-                raise ValueError('Please use spectral type in OBAFGKM.')
-
-            else:
-                teff_low, teff_high = ut.get_spectral_temp(spectral_type)
-
-        # ASTROQUERY HERE
+        # ASTROQUERY FUNCTION HERE
         star_names_list = []
 
     print('\n###############################')
-    print('Starting individual star search')
+    print('#### Creating stellar FFDs ####')
     print('###############################\n')
     for placement, star in enumerate(star_names_list):
         print('Starting on {} ({}/{}).'.format(star,
@@ -121,11 +144,12 @@ def main():
             os.rmdir(star_path)
             continue
 
+        # Analyzes light curve from each sector separately
         lc_path_list = glob.glob(os.path.join(star_path, '*.csv'))
         for lc_path in lc_path_list:
             ut.analyze_lc(lc_path)
-        # This combines flare data if the object was observed in multiple
-        # sectors
+
+        # Combines flare data from all sectors to make FFD
         flares_path_list = glob.glob(os.path.join(star_path, '*.ecsv'))
         ut.generate_ffd(star, star_path, flares_path_list)
 
