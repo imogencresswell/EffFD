@@ -47,8 +47,8 @@ def get_spectral_temp(classification):
 
 
 def save_sector(sector, search_path):
-    """Function that retrieves data for each sector from
-    TESS website
+    """Function that retrieves data for each sector from TESS website
+
     Parameters
     ----------
     sector : str
@@ -73,6 +73,18 @@ def save_sector(sector, search_path):
             raise ValueError('Inputted URL could not be found.')
 
 
+def get_sector_tics(sector_list, search_path):
+    names_array = np.array([])
+    for sector in sector_list:
+        curr_csv = np.genfromtxt(search_path+'sector{}.csv'.format(sector),
+                                 delimiter=',',
+                                 skip_header=6)
+        names_array = np.append(names_array, curr_csv[:, 0])
+    names_array = np.unique(names_array)
+    names_list = names_array.astype(int).astype(str).tolist()
+    return names_list
+
+
 def build_names_from_sectors(sector_list, search_path):
     """Returns names of stars that TESS observed in given
     sector
@@ -90,29 +102,28 @@ def build_names_from_sectors(sector_list, search_path):
     A list of star names found in the specified sectors
 
     """
-    names_array = np.array([])
-    for sector in sector_list:
-        curr_csv = np.genfromtxt(search_path+'sector{}.csv'.format(sector),
-                                 delimiter=',',
-                                 skip_header=6)
-        names_array = np.append(names_array, curr_csv[:, 0])
-    names_array = np.unique(names_array)
-    names_list = names_array.astype(int).astype(str).tolist()
-    tess_names_list = ['TIC ' + name for name in names_list]
+    tic_list = get_sector_tics(sector_list, search_path)
+    tess_names_list = ['TIC ' + name for name in tic_list]
     return tess_names_list
 
 
-def build_all_stars_table(objects):
-    # FOR LOOP THAT GOES THROUGH EACH STAR, SEARCHES USING ASTROQUERY
-    # FOR THE TESS CATALOG FOR THE STAR NAME AND SAVES DATA IF
-    # T_EFF EXISTS & 'S/G' == 'STAR'
-    #
-    # Can astroquery take a list? If so, would be much faster to just
-    # pull those stars straight from there.
-    # -- I don't think it can
-    for object in objects:
+def build_all_stars_table(tic_list, search_path):
+    save_path = search_path + 'all_stars_table.csv'
+    star_tbl = None
+    v = Vizier(catalog="IV/39/tic82", row_limit=-1, timeout=300)
 
-        _ = 0
+    for count, tic in enumerate(tic_list):
+        print('\nTIC {} {}/{}.'.format(tic, count + 1, len(tic_list)))
+        cat = v.query_constraints(TIC=tic)[0]
+
+        if cat['S_G'] == 'STAR' and cat['Teff'] > 0.0:
+            if star_tbl is None:
+                star_tbl = cat
+            else:
+                star_tbl.add_row(cat[0])
+
+    star_tbl.write(save_path)
+
 
 def call_tess_catalog_names(search_path, Tmin, Tmax):
     """Function that uses Vizier query to seach through

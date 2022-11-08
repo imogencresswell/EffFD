@@ -57,7 +57,8 @@ def main():
     if not os.path.isdir(str(args['--out_dir'])):
         os.mkdir(str(args['--out_dir']))
 
-    # Download all sector data if option is chosen
+    # Download all sectors
+    # and create table of all TESS stars with temperatures
     if args['--build_star_table'] == True:
 
         if os.path.isfile(search_dir + 'all_stars_table.csv'):
@@ -77,8 +78,8 @@ def main():
                 s_count = 0
 
         sec_list = list(range(1, s_last))
-        all_stars = ut.build_names_from_sectors(sec_list, search_dir)
-        ut.build_all_stars_table(all_stars)
+        all_stars = ut.get_sector_tics(sec_list, search_dir)
+        ut.build_all_stars_table(all_stars, search_dir)
 
         print('Table for all current TESS stars with temperatures created.')
         print('This table is located in {}'.format(search_dir))
