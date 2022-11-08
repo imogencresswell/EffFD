@@ -2,7 +2,7 @@
 
 # NOTE: Use only (star_names), (spectral_type), or (teff_low, teff_high)
 star_names = ZZ Top, LHS 3844 b, AU Mic
-star_names = AU Mic
+# star_names = AU Mic
 # sectors = 1
 # spectral_type = K
 # teff_low = 2000
