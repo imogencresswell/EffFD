@@ -82,7 +82,7 @@ def save_sector(sector, search_path):
     type_error_catch(sector, str)
     type_error_catch(search_path, str)
 
-    save_string = search_path+'sector{}.csv'.format(sector)
+    save_string = search_path + 'sector{}.csv'.format(sector)
     if not os.path.isfile(save_string):
         try:
             print('Downloading Sector {} observation list.'.format(sector))
@@ -113,15 +113,17 @@ def get_sector_tics(sector_list, search_path):
     type_error_catch(sector_list, list, str)
     type_error_catch(search_path, str)
 
-    names_array = np.array([])
+    tic_array = np.array([])
+
     for sector in sector_list:
-        curr_csv = np.genfromtxt(search_path+'sector{}.csv'.format(sector),
+        curr_csv = np.genfromtxt(search_path + 'sector{}.csv'.format(sector),
                                  delimiter=',',
                                  skip_header=6)
-        names_array = np.append(names_array, curr_csv[:, 0])
-    names_array = np.unique(names_array)
-    names_list = names_array.astype(int).astype(str).tolist()
-    return names_list
+        tic_array = np.append(tic_array, curr_csv[:, 0])
+
+    tic_array = np.unique(tic_array)
+    tic_list = tic_array.astype(int).astype(str).tolist()
+    return tic_list
 
 
 def build_names_from_sectors(sector_list, search_path):
@@ -145,8 +147,8 @@ def build_names_from_sectors(sector_list, search_path):
     type_error_catch(sector_list, list, str)
     type_error_catch(search_path, str)
 
-    tic_list = get_sector_tics(sector_list, search_path)
-    tess_names_list = ['TIC ' + name for name in tic_list]
+    tics = get_sector_tics(sector_list, search_path)
+    tess_names_list = ['TIC ' + name for name in tics]
     return tess_names_list
 
 
@@ -233,6 +235,10 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
         after the object+sector inside the save directory
 
     """
+    type_error_catch(object, str)
+    type_error_catch(save_path, str)
+    type_error_catch(filter_iter, int)
+    type_error_catch(filter_sigma, float)
 
     # SPOC == TESS data pipeline
     # Getting only the 120 second exposure light curves for consistency
@@ -270,6 +276,8 @@ def analyze_lc(csv_path):
     development. Thank you for your understanding.
 
     """
+    type_error_catch(csv_path, str)
+
     lc = ascii.read(csv_path, guess=False, format='csv')
 
     # # # # # # # # # # # # # # # # # #
@@ -317,6 +325,8 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
     """
     type_error_catch(x, np.ndarray)
     type_error_catch(y, np.ndarray)
+    type_error_catch(min_slope, float)
+    type_error_catch(max_slope, float)
 
     dx = np.diff(x, 1)
     dy = np.diff(y, 1)
@@ -355,9 +365,12 @@ def calculate_slope_powerlaw(x, y):
 
     Returns
     -------
-    a : intercept
-    b : slope
-    b_err : error on slope
+    a : float
+        intercept
+    b : float
+        slope
+    b_err : float
+        error on slope
 
     """
     type_error_catch(x, np.ndarray)
@@ -396,6 +409,7 @@ def get_time_and_energy(paths):
         Unit used for flare energies, to be used in plotting
 
     """
+    type_error_catch(paths, list, str)
     if not paths:
         raise ValueError('List of paths is empty')
 
@@ -403,18 +417,16 @@ def get_time_and_energy(paths):
     flare_eng = np.array([])
 
     for file_path in paths:
-        if type(file_path) is not str:
-            raise TypeError('object path must be a string')
-
         try:
             tbl = ascii.read(file_path, guess=False, format='ecsv')
 
             time += tbl['total_lc_time'][0] * \
                 (1.0 * tbl['total_lc_time'].unit).to(u.day)
+
             flare_eng = np.append(flare_eng, tbl['energy'].value)
 
         except FileNotFoundError:
-            print('Flare filepath ' + file_path + ' not found')
+            print('Flare filepath ' + file_path + ' not found.')
             continue
 
     flare_eng.sort()  # Sort flares by size
@@ -442,6 +454,9 @@ def get_log_freq(flare_eng, tot_time):
         log10 of the cumulative frequency
 
     """
+    type_error_catch(flare_eng, np.ndarray)
+    type_error_catch(tot_time, float)
+
     energy = np.log10(flare_eng)
 
     cumulative_count = np.arange(len(energy)) + 1
@@ -474,14 +489,17 @@ def generate_ffd(object, save_path, list_of_paths):
         Saves objects FFD figure
 
     """
+    type_error_catch(object, str)
+    type_error_catch(save_path, str)
+    type_error_catch(light_of_paths, list, str)
+
     monitoring_time, flare_energy, e_unit = get_time_and_energy(list_of_paths)
 
     # # # # # THIS IS FOR THE TOY DATA ONLY - TBREMOVED # # # # #
     flare_energy = np.unique(flare_energy)
     # # # # # END OF TOY DATA PART # # # # #
 
-    log_energy, log_frequency = get_log_freq(flare_energy,
-                                             monitoring_time)
+    log_energy, log_frequency = get_log_freq(flare_energy, monitoring_time)
 
     # linear regression to get slope
     m_ene, m_fre = get_middle_ffd_regime(log_energy, log_frequency)

@@ -22,7 +22,7 @@ class TestDataProcessor(unittest.TestCase):
         self.assertFalse(ut.get_spectral_temp('M') != (2000, 3500))
         self.assertRaises(ValueError, ut.get_spectral_temp, 'banana')
         self.assertRaises(ValueError, ut.get_spectral_temp, 'Y')
-        self.assertRaises(ValueError, ut.get_spectral_temp, 10)
+        self.assertRaises(TypeError, ut.get_spectral_temp, 10)
 
     def test_get_middle_ffd_regime(self):
         self.assertTrue(len(self.re_x) <= len(self.lo_x) and

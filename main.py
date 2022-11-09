@@ -139,7 +139,7 @@ def main():
             ut.save_raw_lc(star,
                            star_path,
                            int(args['--savgov_iterations']),
-                           int(args['--savgov_sigma_cutoff']))
+                           float(args['--savgov_sigma_cutoff']))
         except FileNotFoundError:
             print('No search results found for {}.'.format(star))
             print('Continuing on...\n')

@@ -6,7 +6,7 @@ run run_aumic_search \
     python3 main.py ./config_file
 assert_exit_code 0
 assert_no_stderr
-assert_in_stdout "Starting individual star search"
+assert_in_stdout "Creating stellar FFDs"
 assert_in_stdout "Starting on AU Mic"
 assert_in_stdout "Operations for AU Mic finished."
 
@@ -22,8 +22,11 @@ echo ""
 echo "Checking if expected folders were generated..."
 for dir in "${dir_arr[@]}"
 do
-    if [ -d "$dir" ]; then
+    if [ -d "$dir" ]
+    then
         echo "$dir exists."
+    else
+        echo "Could not find $dir."
     fi
 done
 
@@ -31,7 +34,10 @@ echo ""
 echo "Checking if expected files were generated..."
 for file in "${file_arr[@]}"
 do
-    if test -f "$file"; then
+    if test -f "$file"
+    then
         echo "$file exists."
+    else
+        echo "Could not find $file."
     fi
 done
