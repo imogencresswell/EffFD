@@ -26,7 +26,7 @@ do
     then
         echo "$dir exists."
     else
-        echo "Could not find $dir."
+        echo "ERROR: Could not find $dir."
     fi
 done
 
@@ -38,6 +38,6 @@ do
     then
         echo "$file exists."
     else
-        echo "Could not find $file."
+        echo "ERROR: Could not find $file."
     fi
 done

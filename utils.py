@@ -225,7 +225,7 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
     filter_iter: int
         Number of iterations that lightkurve smooths data over
 
-    filter_sigma : float
+    filter_sig : float
         Statistical sigma at which lightkurve cuts off data
 
     Returns
@@ -238,7 +238,7 @@ def save_raw_lc(object, save_path, filter_iter, filter_sig):
     type_error_catch(object, str)
     type_error_catch(save_path, str)
     type_error_catch(filter_iter, int)
-    type_error_catch(filter_sigma, float)
+    type_error_catch(filter_sig, float)
 
     # SPOC == TESS data pipeline
     # Getting only the 120 second exposure light curves for consistency
@@ -491,7 +491,7 @@ def generate_ffd(object, save_path, list_of_paths):
     """
     type_error_catch(object, str)
     type_error_catch(save_path, str)
-    type_error_catch(light_of_paths, list, str)
+    type_error_catch(list_of_paths, list, str)
 
     monitoring_time, flare_energy, e_unit = get_time_and_energy(list_of_paths)
 
