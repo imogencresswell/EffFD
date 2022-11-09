@@ -49,13 +49,13 @@ def main():
                     args[k] = v
 
     # Search data from selected sectors is saved to avoid re-downloads
-    search_dir = str(args['--search_dir'])
+    search_dir = args['--search_dir']
     if not os.path.isdir(search_dir):
         os.mkdir(search_dir)
 
     # Checks if output directory exists; create one if not
-    if not os.path.isdir(str(args['--out_dir'])):
-        os.mkdir(str(args['--out_dir']))
+    if not os.path.isdir(args['--out_dir']):
+        os.mkdir(args['--out_dir'])
 
     # Download all sectors
     # and create table of all TESS stars with temperatures
@@ -92,12 +92,12 @@ def main():
 
     # Creates list of stars to search for from inputs
     if args['--star_names'] is not None:
-        star_names = str(args['--star_names'])
+        star_names = args['--star_names']
         star_names_list = list(map(str.strip, star_names.split(',')))
 
     # Creates a list of stars from inputted sectors
     elif args['--sectors'] is not None:
-        sec_list = list(map(str.strip, str(args['--sectors']).split(',')))
+        sec_list = list(map(str.strip, args['--sectors'].split(',')))
         for sec in sec_list:
             ut.save_sector(sec, search_dir)
 
@@ -113,7 +113,7 @@ def main():
             raise TypeError('T_eff limits must be integers.')
 
         if args['--spectral_type'] is not None:
-            spectral_type = str(args['--spectral_type'])
+            spectral_type = args['--spectral_type']
             teff_low, teff_high = ut.get_spectral_temp(spectral_type)
 
         # ASTROQUERY FUNCTION HERE
@@ -127,8 +127,7 @@ def main():
                                                placement+1,
                                                len(star_names_list)))
 
-        star_path = os.path.join(str(args['--out_dir']),
-                                 star.replace(' ', '_'))
+        star_path = os.path.join(args['--out_dir'], star.replace(' ', '_'))
 
         try:  # Keeps program running if folders already exist
             os.mkdir(star_path)
