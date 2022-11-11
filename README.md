@@ -18,3 +18,6 @@ On software, many astronomers write their own codes from scratch for every proje
 
 ## Notes
 - Searching by Sector does not care if stars have temperatures or not, but it would be cool if it could auto-reject non-star observations. Not sure how though, using astroquery would increase run times a lot. Lightkurve might not actually have LCs for non-stars, so it wouldn't matter.
+
+## Dependencies
+Some users have had trouble building the Conda environment using the provided `environment.yml`. In that case, this code should be usable by first installing `astropy`, `scipy`, `lightkurve`, `pycodestyle`, `wget`, and `docopt`. The packages `numpy`, `matplotlib`, and `astroquery` are also required, but these should be installed as dependencies of the others.

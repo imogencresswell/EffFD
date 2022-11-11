@@ -6,8 +6,8 @@ Usage:
     main.py <config> [options]
 
 Options:
-    --out_dir=<dir>                Directory for outputs [default: ./data/]
-    --search_dir=<dir>             Folder for searches [default: ./searches/]
+    --out_dir=<dir>                Directory for outputs [default: ./output/]
+    --search_dir=<dir>             Folder for searches [default: ./sectors/]
 
     --star_names=<star>            Names of stars
     --sectors=<sec>                 TESS Sector to pull stars from
