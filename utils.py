@@ -12,6 +12,9 @@ from astroquery.vizier import Vizier
 
 def type_error_catch(var, vartype, inner_vartype=None, err_msg=None):
     if isinstance(vartype, list):
+        if not var:
+            raise ValueError('No passed lists should be empty.')
+
         for inner in var:
             if not isinstance(inner, inner_vartype):
                 if err_msg is None:
@@ -166,43 +169,6 @@ def build_all_stars_table(tic_list, search_path):
                 star_tbl.add_row(cat[0])
 
     star_tbl.write(save_path)
-
-
-# def call_tess_catalog_names(Tmin, Tmax, search_path):
-#     """Function that uses Vizier query to seach through TESS data for
-#     stars within a given temperature range.
-#     NOTE: Currently takes far too long, alternative options being explored
-#
-#     Parameters
-#     ----------
-#     Tmin : int
-#         Minimum temperature
-#
-#     Tmax : int
-#         Maximum temperature
-#
-#     search_path: string
-#         Path to search directory where previous queries are saved
-#
-#     Returns
-#     -------
-#     None
-#         Saves the data for stars within the given temperature range
-#
-#     """
-#     T_str = '{}..{}'.format(Tmin, Tmax)
-#     save_path = search_path + T_str + '.csv'
-#
-#     try:
-#         ascii.read(save_path, guess=False, format='csv')
-#     except FileNotFoundError:
-#         v = Vizier(columns=['TIC', '_RAJ2000', '_DEJ2000'],
-#                    catalog="IV/39/tic82",
-#                    row_limit=-1,
-#                    timeout=300)
-#         cat = v.query_constraints(Teff=T_str)[0]
-#
-#         cat.write(save_path)
 
 
 def save_raw_lc(obj, save_path, filter_iter, filter_sig):
@@ -440,8 +406,6 @@ def get_time_and_energy(paths):
 
     """
     type_error_catch(paths, list, str)
-    if not paths:
-        raise ValueError('List of paths is empty')
 
     time = 0.0 * u.day
     flare_eng = np.array([])

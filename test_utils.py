@@ -18,37 +18,98 @@ import utils as ut  # nopep8
 class TestDataProcessor(unittest.TestCase):
 
     def setUp(self):
-        # Generate fake FFD data, as is done in utils.py
+        # Generate fake FFD data
         self.y = np.unique(np.random.choice(range(1, 5000), size=100))
         self.y.sort()
         self.lo_y, self.lo_x = ut.get_log_freq(self.y, 80.0)
         self.re_x, self.re_y = ut.get_middle_ffd_regime(self.lo_x, self.lo_y)
 
     def test_get_spectral_temp(self):
-
         # positive: check that a valid spectral type gives the right values
         self.assertTrue(ut.get_spectral_temp('M') == (2000, 3500))
 
         # negative: valid spectral type does not return random values
         self.assertFalse(ut.get_spectral_temp('M') != (2000, 3500))
 
-        # asserts: non-strings give TypeError, non-recognized spectral
-        #          types give ValueError
+        # asserts: Non-strings give TypeError.
+        #          Non-recognized spectral types give ValueError.
         self.assertRaises(ValueError, ut.get_spectral_temp, 'banana')
         self.assertRaises(ValueError, ut.get_spectral_temp, 'Y')
         self.assertRaises(TypeError, ut.get_spectral_temp, 10)
 
+    def test_save_sector(self):
+        # positive:
+
+        # negative:
+
+        # assert: Check that incorrect types raise errors.
+        self.assertRaises(TypeError, ut.save_sector, [10, 10], './')
+        self.assertRaises(TypeError, ut.save_sector, 10, './')
+        self.assertRaises(TypeError, ut.save_sector, ['a', 'a'], 10)
+
+    def test_get_sector_tics(self):
+        # positive:
+
+        # negative:
+
+        # assert: Check that incorrect types raise errors.
+        self.assertRaises(TypeError, ut.get_sector_tics, [10, 10], './')
+        self.assertRaises(TypeError, ut.get_sector_tics, 10, './')
+        self.assertRaises(TypeError, ut.get_sector_tics, ['a', 'a'], 10)
+
+    def test_build_names_from_sectors(self):
+        # positive:
+
+        # negative:
+
+        # assert: Check that incorrect types raise errors.
+        self.assertRaises(TypeError, ut.build_names_from_sectors, [1], './')
+        self.assertRaises(TypeError, ut.build_names_from_sectors, 10, './')
+        self.assertRaises(TypeError, ut.build_names_from_sectors, ['a'], 10)
+
+    def build_all_stars_table(self):
+        # positive:
+
+        # negative:
+
+        # assert: Check that incorrect types raise errors.
+        self.assertRaises(TypeError, ut.build_all_stars_table, [10, 10], './')
+        self.assertRaises(TypeError, ut.build_all_stars_table, 10, './')
+        self.assertRaises(TypeError, ut.build_all_stars_table, ['a', 'a'], 10)
+
+    def test_save_raw_lc(self):
+        # positive:
+
+        # negative:
+
+        # assert: Check that incorrect types raise errors.
+        #         Check that files that do not exist raise errors.
+        self.assertRaises(TypeError, ut.save_raw_lc, 1, './', 2, 2.0)
+        self.assertRaises(TypeError, ut.save_raw_lc, 'star', 5, 2, 2.0)
+        self.assertRaises(TypeError, ut.save_raw_lc, 'star', './', 2.0, 2.0)
+        self.assertRaises(TypeError, ut.save_raw_lc, 1, './', 2, 2)
+        self.assertRaises(FileNotFoundError, ut.save_raw_lc,
+                          'ZZ top', './', 2, 2.0)
+
+    def test_analyze_lc(self):
+        # positive:
+
+        # negative:
+
+        # assert: Check that incorrect types raise errors.
+        self.assertRaises(TypeError, ut.analyze_lc, 10)
+
     def test_get_middle_ffd_regime(self):
 
-        # pos: returned array is shorter than the input
+        # positive: Returned array is shorter than the input.
         self.assertTrue(len(self.re_x) <= len(self.lo_x) and
                         len(self.re_y) <= len(self.lo_y))
 
-        # neg: returned array is not longer than the input one
+        # negative: returned array is not longer than the input one
         self.assertFalse(len(self.re_x) > len(self.lo_x) and
                          len(self.re_y) > len(self.lo_y))
 
-        # asserts: checking that non-numpy-arrays don't pass
+        # assert: Check that incorrect types raise errors.
         self.assertRaises(TypeError, ut.get_middle_ffd_regime, [5, 4], [2, 2])
         self.assertRaises(TypeError, ut.get_middle_ffd_regime, 'banana', 'Y')
         self.assertRaises(TypeError, ut.get_middle_ffd_regime, 10.0, 20.0)
@@ -57,32 +118,48 @@ class TestDataProcessor(unittest.TestCase):
         intercept, slope, slope_err = ut.calculate_slope_powerlaw(self.re_x,
                                                                   self.re_y)
 
-        # positive: the error of the slope is less than the slope itself
-        # NOTE: slope is always negative (error always pos), so abs() is used
+        # positive: The error of the slope is less than the slope itself.
+        #           Slope is always negative, so abs() is used to compare.
+        #           FFD slope should be between -0.4 and -2.0
         self.assertTrue(abs(slope) > slope_err)
-
-        # positive: FFD slope should be between -0.4 and -2.0
         self.assertTrue(slope <= -0.4 and slope >= -2.0)
 
-        # neg: FFD slope is not beyond the bounds
+        # negative: FFD slope is not beyond the bounds
         self.assertFalse(slope > -0.4 and slope < -2.0)
 
-        # asserts: TypeError when incorrect types are passed
+        # assert: Check that incorrect types raise errors.
         self.assertRaises(TypeError, ut.calculate_slope_powerlaw, [5, 4], [2])
         self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 'ban', 'Y')
         self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 10.0, 20.0)
 
-    def test_get_log_freq(self):
-        # pos: returned array is = to log10(original)
-        self.assertTrue((self.lo_y == np.log10(self.y)).all())
-
-        # neg: returned array is not different than log10(original)
-        self.assertFalse((self.lo_y != np.log10(self.y)).all())
-
     def test_get_time_and_energy(self):
-        # asserts: type check and can't input empty list
+        # positive:
+
+        # negative:
+
+        # assert: Check that incorrect types raise errors.
+        #         Check that empty lists do not pass.
         self.assertRaises(ValueError, ut.get_time_and_energy, [])
         self.assertRaises(TypeError, ut.get_time_and_energy, [-1, 1.0])
+
+    def test_get_log_freq(self):
+        # positive: returned array is = to log10(original)
+        self.assertTrue((self.lo_y == np.log10(self.y)).all())
+
+        # negative: returned array is not different than log10(original)
+        self.assertFalse((self.lo_y != np.log10(self.y)).all())
+
+        # assert: Check that incorrect types raise errors.
+
+    def generate_ffd(self):
+        # positive:
+
+        # negative:
+
+        # assert: Check that incorrect types raise errors.
+        self.assertRaises(TypeError, ut.generate_ffd, 10, './', ['./'])
+        self.assertRaises(TypeError, ut.generate_ffd, 'star', 10, ['./'])
+        self.assertRaises(TypeError, ut.generate_ffd, 'star', './', 10)
 
     def tearDown(self):
         self.y = 0
