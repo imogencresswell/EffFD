@@ -123,30 +123,37 @@ class TestDataProcessor(unittest.TestCase):
         # Intercept exists and is a positive value.
         # The slope error is less than slope itself.
         # Note: Slope is always negative, so abs() is used to compare.
-        # FFD slope should be between -0.4 and -2.0
+        # FFD slope should be between -0.4 and -5.0
         self.assertTrue(intercept)
         self.assertGreater(intercept, 0.0)
         self.assertGreater(abs(slope), slope_err)
         self.assertLessEqual(slope, -0.4)
         self.assertGreaterEqual(slope, -5.0)
 
-        # negative: FFD slope is not beyond the bounds
+        # Negative Unit Tests
+        # -------------------
+        # FFD slope is not beyond the bounds
         self.assertFalse(slope > -0.4 and slope < -5.0)
 
-        # assert: Check that incorrect types raise errors.
+        # Error Assertions
+        # ----------------
+        # Check that incorrect types raise errors.
+        # Check that empty lists do not pass.
         self.assertRaises(TypeError, ut.calculate_slope_powerlaw, [5, 4], [2])
         self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 'ban', 'Y')
         self.assertRaises(TypeError, ut.calculate_slope_powerlaw, 10.0, 20.0)
+        self.assertRaises(ValueError, ut.calculate_slope_powerlaw, [], [])
 
     def test_get_time_and_energy(self):
         # positive:
 
         # negative:
 
-        # assert: Check that incorrect types raise errors.
-        #         Check that empty lists do not pass.
-        # self.assertRaises(ValueError, ut.get_time_and_energy, [])
+        # assert:
+        # Check that incorrect types raise errors.
+        # Check that empty lists do not pass.
         self.assertRaises(TypeError, ut.get_time_and_energy, [-1, 1.0])
+        self.assertRaises(ValueError, ut.get_time_and_energy, [])
 
     def test_get_log_freq(self):
         # positive: returned array is = to log10(original)
