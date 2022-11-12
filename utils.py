@@ -11,20 +11,21 @@ from astroquery.vizier import Vizier
 
 
 def type_error_catch(var, vartype, inner_vartype=None, err_msg=None):
-    if isinstance(vartype, list):
+    if not isinstance(var, vartype):
+        if err_msg is None:
+            err_msg = '{} is not a {}'.format(var, vartype.__name__)
+        raise TypeError(err_msg)
+
+    elif vartype is list:
         if not var:
             raise ValueError('No passed lists should be empty.')
 
         for inner in var:
             if not isinstance(inner, inner_vartype):
                 if err_msg is None:
-                    err_msg = '{} is not a {}'.format(inner, vartype.__name__)
+                    err_msg = '{} is not a {}'.format(inner,
+                                                      inner_vartype.__name__)
                 raise TypeError(err_msg)
-
-    elif not isinstance(var, vartype):
-        if err_msg is None:
-            err_msg = '{} is not a {}'.format(var, vartype.__name__)
-        raise TypeError(err_msg)
 
 
 def get_spectral_temp(classification):
@@ -115,8 +116,8 @@ def get_sector_tics(sector_list, search_path):
 
     for sector in sector_list:
         curr_csv = np.genfromtxt(search_path + 'sector{}.csv'.format(sector),
-                                 delimiter = ',',
-                                 skip_header = 6)
+                                 delimiter=',',
+                                 skip_header=6)
         tic_array = np.append(tic_array, curr_csv[:, 0])
 
     tic_array = np.unique(tic_array)
@@ -156,7 +157,7 @@ def build_all_stars_table(tic_list, search_path):
 
     save_path = search_path + 'all_stars_table.csv'
     star_tbl = None
-    v = Vizier(catalog="IV/39/tic82", row_limit = -1, timeout=300)
+    v = Vizier(catalog="IV/39/tic82", row_limit=-1, timeout=300)
 
     for count, tic in enumerate(tic_list):
         print('\nTIC {} {}/{}.'.format(tic, count + 1, len(tic_list)))
@@ -214,10 +215,10 @@ def save_raw_lc(obj, save_path, filter_iter, filter_sig):
             continue
 
         lc = result.download()
-        lc = lc.flatten(niters = filter_iter, sigma = filter_sig)
+        lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
 
         # Save light curve CSV file
-        lc.to_csv(save_string + '.csv', overwrite = True)
+        lc.to_csv(save_string + '.csv', overwrite=True)
 
         # Saves light curve PNG plot
         plt.figure()
@@ -238,7 +239,7 @@ def analyze_lc(csv_path):
     """
     type_error_catch(csv_path, str)
 
-    lc = ascii.read(csv_path, guess = False, format = 'csv')
+    lc = ascii.read(csv_path, guess=False, format='csv')
 
     # # # # # # # # # # # # # # # # # #
     # FLARE FINDING METHOD GOES HERE. #
@@ -271,7 +272,6 @@ def analyze_lc(csv_path):
     yy_v2u = np.log10(1.79 * 10**yy_v)
     concatarray = np.concatenate([yy_u, yy_b2u, yy_v2u])
 
-
     flare_tbl = Table()
     # any u.unit converts the data into the correct astrophysical unit
     flare_tbl['energy'] = 10**concatarray * u.erg
@@ -282,7 +282,7 @@ def analyze_lc(csv_path):
     # # # # # END TOY DATA # # # # #
 
     save_path = csv_path.replace('.csv', '_flares.ecsv')
-    flare_tbl.write(save_path, overwrite = True)
+    flare_tbl.write(save_path, overwrite=True)
 
 
 def get_middle_ffd_regime(x, y, min_slope=-5.0, max_slope=-1.0):
@@ -327,9 +327,9 @@ def get_middle_ffd_regime(x, y, min_slope=-5.0, max_slope=-1.0):
     # not rogue points from first regime
 
     try:
-        for idx, pla in enumerate(cond):
-            if pla-cond[idx+1] <= 2 and cond[idx+3]-cond[idx+2] <= 2:
-                starting_idx = pla
+        for count, idx in enumerate(cond):  # note: cond is an array of idxs
+            if idx-cond[count+1] <= 2 and cond[count+3]-cond[count+2] <= 2:
+                starting_idx = idx
                 break
         ending_idx = cond[-1]
     except IndexError:
@@ -412,7 +412,7 @@ def get_time_and_energy(paths):
 
     for file_path in paths:
         try:
-            tbl = ascii.read(file_path, guess = False, format = 'ecsv')
+            tbl = ascii.read(file_path, guess=False, format='ecsv')
 
             time += tbl['total_lc_time'][0] * \
                 (1.0 * tbl['total_lc_time'].unit).to(u.day)
