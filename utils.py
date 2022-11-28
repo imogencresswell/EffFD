@@ -259,10 +259,8 @@ def analyze_lc(csv_path):
     criteria = 1 + 3*np.std(lc['flux'])
     
     criteria_index = np.where(lc['flux'] > criteria)[0]
-    
-
+ 
     grouped_criteria = group_by_missing(criteria_index.tolist())
-    
     
     flare_index = []
     for group in grouped_criteria:
@@ -297,9 +295,13 @@ def analyze_lc(csv_path):
                                                'max_flux_time',
                                                'fluence'])
     print(flare_table)
-    flare_table['total_lc_time'] = len(lc['time']) * 120.0 * u.second
-    save_path = csv_path.replace('.csv', '_flares.ecsv')
-    flare_table.write(save_path, overwrite=True)
+    try:
+        flare_table['total_lc_time'] = len(lc['time']) * 120.0 * u.second
+        save_path = csv_path.replace('.csv', '_flares.ecsv')
+        flare_table.write(save_path, overwrite=True)
+    except TypeError:
+        print('No flares exceeding criteria')
+        
         
         
         
