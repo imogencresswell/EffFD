@@ -226,6 +226,17 @@ def save_raw_lc(obj, save_path, filter_iter, filter_sig):
         plt.savefig(save_string + '.png')
         plt.close()
 
+def group_by_missing(seq):
+    if not seq:
+        return seq
+    grouped = [[seq[0]]]
+    for x in seq[1:]:
+        if x == grouped[-1][-1] + 1:
+            grouped[-1].append(x)
+        else:
+            grouped.append([x])
+    return grouped
+
 
 def analyze_lc(csv_path):
     """Takes the light curve data, finds flares in the
@@ -241,48 +252,70 @@ def analyze_lc(csv_path):
 
     lc = ascii.read(csv_path, guess=False, format='csv')
 
-    # # # # # # # # # # # # # # # # # #
-    # FLARE FINDING METHOD GOES HERE. #
-    # # # # # # # # # # # # # # # # # #
 
-    # # # # # TOY DATA INPUT FOR NOW # # # # #
-    yy_v = np.array([29.62, 30.32, 30.22, 30.77, 31.54, 30.10, 29.05, 30.01,
-                     30.65, 30.64, 30.28, 30.13, 30.68, 30.56, 30.03, 29.66,
-                     29.89, 30.74, 30.51, 29.99, 30.03, 31.02, 31.35, 31.57,
-                     29.88, 30.26, 29.57, 29.76, 30.19, 29.79, 30.16, 30.49,
-                     30.67, 30.67, 31.75, 29.90, 29.83, 30.27, 29.81])
-    yy_b = np.array([30.16, 28.37, 30.45, 31.03, 31.70, 30.75, 30.10, 30.25,
-                     31.01, 31.08, 30.63, 30.65, 30.98, 30.68, 30.16, 29.93,
-                     30.08, 30.83, 30.66, 29.93, 30.06, 31.25, 31.57, 31.87,
-                     30.09, 30.60, 30.12, 29.94, 30.10, 29.26, 29.51, 30.64,
-                     30.25, 29.70, 31.87, 29.59, 30.21, 30.15, 31.18, 30.17,
-                     30.42, 29.75, 29.25, 29.87, 29.83, 29.61, 30.23, 30.26,
-                     29.97, 30.18, 29.82, 29.42, ])
-    yy_u = np.array([30.32, 29.96, 30.49, 31.00, 31.67, 30.93, 30.23, 30.33,
-                     30.96, 31.06, 30.82, 30.44, 30.66, 30.76, 30.30, 30.02,
-                     30.27, 30.96, 30.84, 30.30, 30.27, 31.34, 31.66, 32.01,
-                     30.20, 30.66, 30.25, 30.02, 30.31, 29.61, 30.18, 30.88,
-                     30.48, 30.48, 31.83, 29.96, 30.28, 29.94, 29.32, 29.77,
-                     30.45, 29.91, 29.76, 30.34, 29.95, 30.33, 30.50, 30.49,
-                     29.63, 28.69, 29.82])
-    # yy_v = np.array([33.77, 33.5 , 32.98, 32.47, 32.32, 32.79])
-    # yy_b = np.array([33.96, 33.71, 32.81, 32.35, 32.48, 32.78])
-    # yy_u = np.array([34.09, 33.78, 32.44, 32.01, 32.44, 32.82])
-    yy_b2u = np.log10(1.2 * 10**yy_b)
-    yy_v2u = np.log10(1.79 * 10**yy_v)
-    concatarray = np.concatenate([yy_u, yy_b2u, yy_v2u])
+    #
+    # FLARE FINDING METHOD GOES HERE
+    #
+    criteria = 1 + 3*np.std(lc['flux'])
+    
+    criteria_index = np.where(lc['flux'] > criteria)[0]
+    
 
-    flare_tbl = Table()
-    # any u.unit converts the data into the correct astrophysical unit
-    flare_tbl['energy'] = 10**concatarray * u.erg
-    # flare_tbl['energy'] = np.random.choice(range(1, 5000),
-    #                                        size=20,
-    #                                        replace=False) * 1e29 * u.erg
-    flare_tbl['total_lc_time'] = len(lc['time']) * 120.0 * u.second
-    # # # # # END TOY DATA # # # # #
+    grouped_criteria = group_by_missing(criteria_index.tolist())
+    
+    
+    flare_index = []
+    for group in grouped_criteria:
+        
+        if len(group) > 3:
+            flare_index.append(group)
+    
+    table_matrix = np.zeros((len(flare_index), 6))
+    
+    for counts, flare in enumerate(flare_index):
 
+        flare_flux = lc['flux'][flare] - 1
+        
+        flare_time = lc['time'][flare]
+        # start time
+        table_matrix[counts,0] = lc['time'][flare[0]]
+        # end time
+        table_matrix[counts,1] = lc['time'][flare[-1]]
+        # duration
+        table_matrix[counts,2] = lc['time'][flare[-1]] - lc['time'][flare[0]]
+        # max flux
+        table_matrix[counts,3] = np.max(flare_flux)
+        # max flux time
+        table_matrix[counts,4] = lc['time'][np.where(flare_flux == np.max(flare_flux))]
+        # fluence
+        table_matrix[counts,5] = np.sum(flare_flux)
+        
+    flare_table = Table(table_matrix, names = ['start_time',
+                                               'end_time',
+                                               'duration',
+                                               'max_flux',
+                                               'max_flux_time',
+                                               'fluence'])
+    print(flare_table)
+    flare_table['total_lc_time'] = len(lc['time']) * 120.0 * u.second
     save_path = csv_path.replace('.csv', '_flares.ecsv')
-    flare_tbl.write(save_path, overwrite=True)
+    flare_table.write(save_path, overwrite=True)
+        
+        
+        
+        
+    
+    
+
+    # Toy data input for now
+    #flare_tbl = Table()
+    # any u.unit converts the data into the correct
+    # astrophysical unit
+    #flare_tbl['energy'] = np.random.choice(range(1, 5000),
+                                           #size=20,
+                                           #replace=False) * 1e29 * u.erg
+    #flare_tbl['total_lc_time'] = len(lc['time']) * 120.0 * u.second
+
 
 
 def get_middle_ffd_regime(x, y, min_slope=-5.0, max_slope=-1.0):
@@ -417,14 +450,15 @@ def get_time_and_energy(paths):
             time += tbl['total_lc_time'][0] * \
                 (1.0 * tbl['total_lc_time'].unit).to(u.day)
 
-            flare_eng = np.append(flare_eng, tbl['energy'].value)
+            flare_eng = np.append(flare_eng, tbl['fluence'].value)
 
         except FileNotFoundError:
             print('Flare filepath ' + file_path + ' not found.')
             continue
 
-    flare_eng.sort()  # Sort flares by size
-    return time.value, flare_eng, tbl['energy'].unit
+    flare_eng.sort()
+    return time, flare_eng, tbl['fluence'].unit
+
 
 
 def get_log_freq(flare_eng, tot_time):
