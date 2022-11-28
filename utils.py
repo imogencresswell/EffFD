@@ -457,7 +457,7 @@ def get_time_and_energy(paths):
             continue
 
     flare_eng.sort()
-    return time, flare_eng, tbl['fluence'].unit
+    return time.value, flare_eng, tbl['fluence'].unit
 
 
 
