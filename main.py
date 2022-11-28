@@ -152,7 +152,11 @@ def main():
 
         # Combines flare data from all sectors to make FFD
         flares_path_list = glob.glob(os.path.join(star_path, '*.ecsv'))
-        ut.generate_ffd(star, star_path, flares_path_list)
+        
+        if len(flares_path_list) == 0:
+            print('No flares found overall')
+        else:
+            ut.generate_ffd(star, star_path, flares_path_list)
 
         print('Operations for {} finished.\n'.format(star))
 
