@@ -10,177 +10,220 @@ from scipy.optimize import curve_fit
 from astroquery.vizier import Vizier
 
 
+def type_error_catch(var, vartype, inner_vartype=None, err_msg=None):
+    if not isinstance(var, vartype):
+        if err_msg is None:
+            err_msg = '{} is not a {}'.format(var, vartype.__name__)
+        raise TypeError(err_msg)
+
+    elif vartype is list:
+        if not var:
+            raise ValueError('No passed lists should be empty.')
+
+        for inner in var:
+            if not isinstance(inner, inner_vartype):
+                if err_msg is None:
+                    err_msg = '{} is not a {}'.format(inner,
+                                                      inner_vartype.__name__)
+                raise TypeError(err_msg)
+
+
 def get_spectral_temp(classification):
     """Returns upper and lower temperature limits in
     Kelvin of required spectral class
+
     Parameters
     ----------
     classification : str
-        Star classification
+        Stellar spectral type to get temperatures for
 
     Returns
     -------
-    Tuple containing upper and lower temperature of given
-    spectral class
+    temperature_limits : tuple of two int
+        Upper and lower temperature of given spectral class
 
     """
-    if classification == 'M':
-        return 2000, 3500  # low temp limit, high temp limit, in K
-    elif classification == 'K':
-        return 3500, 5000
-    elif classification == 'G':
-        return 5000, 6000
-    elif classification == 'F':
-        return 6000, 7500
-    elif classification == 'A':
-        return 7500, 10000
-    elif classification == 'B':
-        return 10000, 30000
-    elif classification == 'O':
-        return 30000, 60000
+    type_error_catch(classification, str)
+
+    if classification in 'L,T,Y'.split(','):
+        raise ValueError('Brown dwarfs are not yet supported.')
+    elif classification not in 'O,B,A,F,G,K,M'.split(','):
+        raise ValueError('Please use spectral type in OBAFGKM.')
     else:
-        raise ValueError('Improper spectral type given.')
+        # low temp limit, high temp limit, in K
+        temp_dict = {'M': (2000, 3500),
+                     'K': (3500, 5000),
+                     'G': (5000, 6000),
+                     'F': (6000, 7500),
+                     'A': (7500, 10000),
+                     'B': (10000, 30000),
+                     'O': (30000, 60000)}
+        return temp_dict[classification]
 
 
-def save_sector_list(sector, search_path):
-    """Function that retrieves data for each sector from
-    TESS website
+def save_sector(sector, search_path):
+    """Function that retrieves data for each sector from the TESS website
+
     Parameters
     ----------
     sector : str
         TESS sector to search for
 
-    search_path: str
-        path to search directory where
-        previous queries are saved
+    search_path : str
+        Path to search directory where previous queries are saved
 
     Returns
     -------
-    Saves the sector data in the search folder
+    None
+        Saves the sector data as a CSV in the search folder
 
     """
-    save_string = search_path+'sector{}.csv'.format(sector)
+    type_error_catch(sector, str)
+    type_error_catch(search_path, str)
+
+    save_string = search_path + 'sector{}.csv'.format(sector)
     if not os.path.isfile(save_string):
-        print('Downloading Sector {} observation list.'.format(sector))
-        url = "https://tess.mit.edu/wp-content/uploads/all_targets_S{}_v1.csv".format(sector.zfill(3))  # nopep8
-        urllib.request.urlretrieve(url, save_string)
+        try:
+            print('Downloading Sector {} observation list.'.format(sector))
+            url = "https://tess.mit.edu/wp-content/uploads/all_targets_S{}_v1.csv".format(sector.zfill(3))  # nopep8
+            urllib.request.urlretrieve(url, save_string)
+        except urllib.error.HTTPError:
+            raise ValueError('Inputted URL could not be found.')
+
+
+def get_sector_tics(sector_list, search_path):
+    """For given TESS Sectors, gets the unique TESS identifiers (TIC) of all
+    observed objects
+
+    Parameters
+    ----------
+    sector_list : list of str
+        List of TESS Sectors
+
+    search_path : str
+        Path to search directory where previous queries are saved
+
+    Returns
+    -------
+    names_list : list of str
+        TESS identifiers (TIC) for unique objects in given Sectors
+
+    """
+    type_error_catch(sector_list, list, str)
+    type_error_catch(search_path, str)
+
+    tic_array = np.array([])
+
+    for sector in sector_list:
+        curr_csv = np.genfromtxt(search_path + 'sector{}.csv'.format(sector),
+                                 delimiter=',',
+                                 skip_header=6)
+        tic_array = np.append(tic_array, curr_csv[:, 0])
+
+    tic_array = np.unique(tic_array)
+    tic_list = tic_array.astype(int).astype(str).tolist()
+    return tic_list
 
 
 def build_names_from_sectors(sector_list, search_path):
-    """Returns names of stars that TESS observed in given
-    sector
+    """Returns TESS names (e.g. 'TIC 1234') of objects observed in the
+    listed Sectors
+
     Parameters
     ----------
-    sector_list : list of strings
+    sector_list : list of str
         List TESS sectors to search through
 
     search_path: str
-        Path to search directory where
-        previous queries are saved
+        Path to search directory where previous queries are saved
 
     Returns
     -------
-    A list of star names found in the specified sectors
+    tess_names_list : list of str
+        TESS names for all observed objects in given Sectors
 
     """
-    names_array = np.array([])
-    for sector in sector_list:
-        curr_csv = np.genfromtxt(search_path+'sector{}.csv'.format(sector),
-                                 delimiter=',',
-                                 skip_header=6)
-        names_array = np.append(names_array, curr_csv[:, 0])
-    names_list = names_array.astype(int).astype(str).tolist()
-    tess_names_list = ['TIC '+name for name in names_list]
+    type_error_catch(sector_list, list, str)
+    type_error_catch(search_path, str)
+
+    tics = get_sector_tics(sector_list, search_path)
+    tess_names_list = ['TIC ' + name for name in tics]
     return tess_names_list
 
 
-def call_tess_catalog_names(search_path, Tmin, Tmax):
-    """Function that uses Vizier query to seach through
-    TESS data for stars within a given temperature range
-    Note: Currently takes far too long, alternative options
-    being explored
-    Parameters
-    ----------
-    Tmin : int
-        Minimum temperature
+def build_all_stars_table(tic_list, search_path):
+    type_error_catch(tic_list, list, str)
+    type_error_catch(search_path, str)
 
-    Tmax : int
-        Maximum temperature
+    save_path = search_path + 'all_stars_table.csv'
+    star_tbl = None
+    v = Vizier(catalog="IV/39/tic82", row_limit=-1, timeout=300)
 
-    search_path: string
-        path to search directory where
-        previous queries are saved
+    for count, tic in enumerate(tic_list):
+        print('\nTIC {} {}/{}.'.format(tic, count + 1, len(tic_list)))
+        cat = v.query_constraints(TIC=tic)[0]
 
-    Returns
-    -------
-    Saves the data for stars within the given
-    temperature range
+        if cat['S_G'] == 'STAR' and cat['Teff'] > 0.0:
+            if star_tbl is None:
+                star_tbl = cat
+            else:
+                star_tbl.add_row(cat[0])
 
-    """
-    T_str = '{}..{}'.format(Tmin, Tmax)
-    save_path = search_path + T_str + '.csv'
-
-    try:
-        ascii.read(save_path, guess=False, format='csv')
-    except FileNotFoundError:
-        v = Vizier(columns=['TIC', '_RAJ2000', '_DEJ2000'],
-                   catalog="IV/39/tic82",
-                   row_limit=-1,
-                   timeout=300)
-        cat = v.query_constraints(Teff=T_str)[0]
-
-        cat.write(save_path)
+    star_tbl.write(save_path)
 
 
-def save_raw_lc(object, save_path, filter_iter, filter_sig):
+def save_raw_lc(obj, save_path, filter_iter, filter_sig):
     """Uses lightkurve to retrieve the lightcurve from TESS
-    object and saves the lightcurves plus the raw data
+    object and saves the light curve image plus the raw data
+
     Parameters
     ----------
-    object : str
-        TESS object
+    obj : str
+        TESS object (mostly stars)
 
     save_path : str
-        path to the save directory
+        Path to the save directory
 
     filter_iter: int
-        number of iterations that lightkurve
-        smooths data over
+        Number of iterations that lightkurve smooths data over
 
-    filter_sigma: float
-        statistical sigma at which lightkurve
-        cuts off data
-
-    Returns
-    -------
-    Saves the lightcurve in a directory named after the object
-    and its sector inside the save directory
+    filter_sig : float
+        Statistical sigma at which lightkurve cuts off data
 
     """
+    type_error_catch(obj, str)
+    type_error_catch(save_path, str)
+    type_error_catch(filter_iter, int)
+    type_error_catch(filter_sig, float)
 
     # SPOC == TESS data pipeline
     # Getting only the 120 second exposure light curves for consistency
-    search_result = lk.search_lightcurve(object, author='SPOC', exptime=120)
+    search_result = lk.search_lightcurve(obj, author='SPOC', exptime=120)
     if not search_result:
-        raise FileNotFoundError('No results for {}.'.format(object))
+        raise FileNotFoundError('No results for {}.'.format(obj))
 
     for result in search_result:
         sector = result[0].mission[0][-2:]
+
+        # save files named after star+sector, in the star's output directory
         save_string = '{}/{}_{}'.format(save_path,
-                                        object.replace(' ', '_'),
+                                        obj.replace(' ', '_'),
                                         sector)
 
         if os.path.isfile(save_string+'.csv'):
-            print('Sector {} CSV exists for {}'.format(sector, object))
+            print('Sector {} CSV exists for {}'.format(sector, obj))
             continue
 
         lc = result.download()
         lc = lc.flatten(niters=filter_iter, sigma=filter_sig)
-        lc.to_csv(save_string+'.csv', overwrite=True)
 
+        # Save light curve CSV file
+        lc.to_csv(save_string + '.csv', overwrite=True)
+
+        # Saves light curve PNG plot
         plt.figure()
         lc.plot()
-        plt.savefig(save_string+'.png')
+        plt.savefig(save_string + '.png')
         plt.close()
 
 def group_by_missing(seq):
@@ -205,7 +248,10 @@ def analyze_lc(csv_path):
     development. Thank you for your understanding.
 
     """
+    type_error_catch(csv_path, str)
+
     lc = ascii.read(csv_path, guess=False, format='csv')
+
 
     #
     # FLARE FINDING METHOD GOES HERE
@@ -272,9 +318,10 @@ def analyze_lc(csv_path):
 
 
 
-def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
-    """Finds the location of the middle regime of the FFD using
-    the min and max slope of where most middle regimes lie
+def get_middle_ffd_regime(x, y, min_slope=-5.0, max_slope=-1.0):
+    """Finds the location of the middle regime of the flare frequency diagram
+    (FFD) using the min and max slope of where most middle regimes lie
+
     Parameters
     ----------
     x : numpy array
@@ -283,20 +330,24 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
     y : numpy array
         Cumulative frequency array
 
-    min_slope: float
+    min_slope : float
         minimum value of the slope for the condition
 
-    max_slope: float
+    max_slope : float
         maximum value of the slope for the condition
 
     Returns
     -------
-    new_x : Energy array within middle regime
-    new_y : Cumulative frequency array within middle regime
+    new_x : numpy array
+        Energy array within middle regime
+    new_y : numpy array
+        Cumulative frequency array within middle regime
 
     """
-    if not isinstance(x, np.ndarray) or not isinstance(y, np.ndarray):
-        raise TypeError('x and y must be numpy array')
+    type_error_catch(x, np.ndarray)
+    type_error_catch(y, np.ndarray)
+    type_error_catch(min_slope, float)
+    type_error_catch(max_slope, float)
 
     dx = np.diff(x, 1)
     dy = np.diff(y, 1)
@@ -307,11 +358,16 @@ def get_middle_ffd_regime(x, y, min_slope=-2.0, max_slope=-0.40):
     # this loop is checking that the next two points also satisfy the
     # condition so that we only get data points in the middle regime and
     # not rogue points from first regime
-    for idx, pla in enumerate(cond):
-        if pla-cond[idx+1] <= 2 and cond[idx+3]-cond[idx+2] <= 2:
-            starting_idx = pla + 1
-            break
-    ending_idx = cond[-1] - 1
+
+    try:
+        for count, idx in enumerate(cond):  # note: cond is an array of idxs
+            if idx-cond[count+1] <= 2 and cond[count+3]-cond[count+2] <= 2:
+                starting_idx = idx
+                break
+        ending_idx = cond[-1]
+    except IndexError:
+        starting_idx = cond[0]
+        ending_idx = cond[-1]
 
     new_x = x[starting_idx:ending_idx]
     new_y = y[starting_idx:ending_idx]
@@ -324,6 +380,7 @@ def func_powerlaw(x, a, b):
 
 def calculate_slope_powerlaw(x, y):
     """Find the slope of powerlaw
+
     Parameters
     ----------
     x : numpy array
@@ -334,19 +391,25 @@ def calculate_slope_powerlaw(x, y):
 
     Returns
     -------
-    a : intercept
-    b : slope
-    b_err : error on slope
+    a : float
+        intercept
+    b : float
+        slope
+    b_err : float
+        error on slope
 
     """
-    if not isinstance(x, np.ndarray) or not isinstance(y, np.ndarray):
-        raise TypeError('x and y must be numpy array')
+    type_error_catch(x, np.ndarray)
+    type_error_catch(y, np.ndarray)
 
+    # get the fit to func_powerlaw() using dataset (x, y)
     solution = curve_fit(func_powerlaw, x, y, maxfev=2000)
-    a = solution[0][0]
-    b = solution[0][1]
-    b_err = b/np.sqrt(len(x))
-    return a, b, np.abs(b_err)
+
+    a = solution[0][0]  # intercept
+    b = solution[0][1]  # slope
+    b_err = np.abs(b / np.sqrt(len(x)))  # slope_err
+
+    return a, b, b_err
 
 
 def get_time_and_energy(paths):
@@ -355,98 +418,118 @@ def get_time_and_energy(paths):
     each flare
     Note: Some TESS sectors overlap therefore the same object
     might be in multiple sectors
+
     Parameters
     ----------
-    paths : list of strings
-        Path to object data, if the object
-        was observed in multiple TESS sectors
-        there will be multiple paths, otherwise
-        it will be a single filepath
+    paths: list of str
+        Path to object data.
+        If the object was observed in multiple TESS sectors, there will be
+        multiple paths, otherwise it will be a single filepath.
 
     Returns
     -------
-    time : total time TESS observed the object
-    flare_eng : list of energies of the flares
+    time : float
+        Total time TESS observed the object, in units of days
+
+    flare_eng : numpy array
+        Flare energies, sorted by total size
+
+    e_unit : astropy unit
+        Unit used for flare energies, to be used in plotting
 
     """
-    if not paths:
-        raise ValueError('List of paths is empty')
+    type_error_catch(paths, list, str)
 
     time = 0.0 * u.day
     flare_eng = np.array([])
+
     for file_path in paths:
-        if type(file_path) is not str:
-            raise TypeError('object path must be a string')
         try:
             tbl = ascii.read(file_path, guess=False, format='ecsv')
+
             time += tbl['total_lc_time'][0] * \
                 (1.0 * tbl['total_lc_time'].unit).to(u.day)
+
             flare_eng = np.append(flare_eng, tbl['fluence'].value)
+
         except FileNotFoundError:
-            print('Flare filepath '+file_path+' not found')
+            print('Flare filepath ' + file_path + ' not found.')
             continue
+
     flare_eng.sort()
     return time, flare_eng, tbl['fluence'].unit
+
 
 
 def get_log_freq(flare_eng, tot_time):
     """Takes the flare energy array and the time it was observed
     over and returns the cumulative frequency for each energy
+
     Parameters
     ----------
-    flare_eng : array
+    flare_eng : numpy array
        array of flare energy
 
-    tot_time: total time TESS observed the object
+    tot_time : float
+        total time TESS observed the object
 
     Returns
     -------
-    time : list of times that a flare occurred
-    flare_eng : list of energies of the flares
+    energy : numpy array
+        log10 flare energies
+
+    frequency : numpy array
+        log10 of the cumulative frequency
 
     """
+    type_error_catch(flare_eng, np.ndarray)
+    type_error_catch(tot_time, float)
+
     energy = np.log10(flare_eng)
+
     cumulative_count = np.arange(len(energy)) + 1
     flare_frequency = cumulative_count[::-1] / tot_time
+
     frequency = np.log10(flare_frequency)
+
     return energy, frequency
 
 
-def generate_ffd(object, save_path, list_of_paths):
-    """This function generates and saves the FFD
+def generate_ffd(obj, save_path, list_of_paths):
+    """This function generates and saves the flare freqeucny diagram (FFD)
+
     Parameters
     ----------
-    object : str
-       Name of object
+    obj : str
+       Name of object (mainly stars)
 
     save_path: str
         Path to save directory
 
     list_of_paths: list of str
-        Path to object data, if the object
-        was observed in multiple TESS sectors
-        there will be multiple paths, otherwise
-        it will be a single filepath
-
-    Returns
-    -------
-    Figure of FFD for the object
+        Path to object data.
+        If the object was observed in multiple TESS sectors, there will be
+        multiple paths, otherwise it will be a single filepath.
 
     """
+    type_error_catch(obj, str)
+    type_error_catch(save_path, str)
+    type_error_catch(list_of_paths, list, str)
+
     monitoring_time, flare_energy, e_unit = get_time_and_energy(list_of_paths)
 
-    # THIS IS FOR THE TOY DATA ONLY - TO BE REMOVED
+    # # # # # THIS IS FOR THE TOY DATA ONLY - TBREMOVED # # # # #
     flare_energy = np.unique(flare_energy)
-    # END OF TOY DATA PART
+    # # # # # END OF TOY DATA PART # # # # #
 
-    log_energy, log_frequency = get_log_freq(flare_energy,
-                                             monitoring_time.value)
+    log_energy, log_frequency = get_log_freq(flare_energy, monitoring_time)
 
-    # linear regression to get slope
+    # Linear regression to get slope
     m_ene, m_fre = get_middle_ffd_regime(log_energy, log_frequency)
     intercept, slope, slope_err = calculate_slope_powerlaw(m_ene, m_fre)
     # alpha = np.abs(slope - 1)
 
+    # Saves FFD figure
     fig, ax = plt.subplots()
     ax.plot(log_energy,
             10**log_frequency,
@@ -458,8 +541,8 @@ def generate_ffd(object, save_path, list_of_paths):
             label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
     ax.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % e_unit,
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
-           title='EFFD for {}'.format(object),
+           title='EFFD for {}'.format(obj),
            yscale='log')
     ax.legend()
-    fig.savefig('{}/{}_FFD.png'.format(save_path, object.replace(' ', '_')))
+    fig.savefig('{}/{}_FFD.png'.format(save_path, obj.replace(' ', '_')))
     plt.close(fig)
