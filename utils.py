@@ -227,6 +227,20 @@ def save_raw_lc(obj, save_path, filter_iter, filter_sig):
         plt.close()
 
 def group_by_missing(seq):
+    """Takes input array and groups
+    consecutive numbers
+    Parameters
+    ----------
+    seq : list
+        Data to be grouped
+
+    Returns
+    -------
+    grouped : list
+        List of list where each list
+        is a group of consequative
+        numbers
+    """
     if not seq:
         return seq
     grouped = [[seq[0]]]
@@ -239,29 +253,27 @@ def group_by_missing(seq):
 
 
 def analyze_lc(csv_path):
-    """Takes the light curve data, finds flares in the
-    light curve and saves this data to an ecsv file
-    Note: currently this creates toy data for each light curve
-    inputted. The main flare-finding routine is based on a not-yet-published
-    paper, and we are not able to share it. We have plans to implement other
-    methods soon, but the toy data allows us to move forward with code
-    development. Thank you for your understanding.
+    """Takes the light curve data and finds flares
+    using a 3 sigma method. If flares are found
+    in the data the start time, end time, duration
+    max flux, and time of the max flux are added
+    to a table and saved.
+    Parameters
+    ----------
+    csv_path : str
+        Path to csv file for the sector data
 
+    Returns
+    -------
+    _flares.ecsv file containing flare data
     """
+    
     type_error_catch(csv_path, str)
 
     lc = ascii.read(csv_path, guess=False, format='csv')
-
-
-    #
-    # FLARE FINDING METHOD GOES HERE
-    #
+    # Flare finding method
     criteria = 1 + 3*np.std(lc['flux'])
-    
     criteria_index = np.where(lc['flux'] > criteria)[0]
-    
-
-    
     grouped_criteria = group_by_missing(criteria_index.tolist())
     
     flare_index = []
@@ -277,9 +289,7 @@ def analyze_lc(csv_path):
         table_matrix = np.zeros((len(flare_index), 6))
     
         for counts, flare in enumerate(flare_index):
-
             flare_flux = lc['flux'][flare] - 1
-        
             flare_time = lc['time'][flare]
             # start time
             table_matrix[counts,0] = lc['time'][flare[0]]
@@ -306,25 +316,6 @@ def analyze_lc(csv_path):
         save_path = csv_path.replace('.csv', '_flares.ecsv')
         flare_table.write(save_path, overwrite=True)
         print(str(len(flare_table['fluence']))+' flares were found in this sector data!')
-
-        
-        
-        
-        
-        
-    
-    
-
-    # Toy data input for now
-    #flare_tbl = Table()
-    # any u.unit converts the data into the correct
-    # astrophysical unit
-    #flare_tbl['energy'] = np.random.choice(range(1, 5000),
-                                           #size=20,
-                                           #replace=False) * 1e29 * u.erg
-    #flare_tbl['total_lc_time'] = len(lc['time']) * 120.0 * u.second
-
-
 
 def get_middle_ffd_regime(x, y, min_slope=-5.0, max_slope=-1.0):
     """Finds the location of the middle regime of the flare frequency diagram
