@@ -515,14 +515,8 @@ def generate_ffd(obj, save_path, list_of_paths):
     type_error_catch(save_path, str)
     type_error_catch(list_of_paths, list, str)
     
-    
-
     monitoring_time, flare_energy, e_unit = get_time_and_energy(list_of_paths)
 
-    # # # # # THIS IS FOR THE TOY DATA ONLY - TBREMOVED # # # # #
-    flare_energy = np.unique(flare_energy)
-    # # # # # END OF TOY DATA PART # # # # #
-    
     log_energy, log_frequency = get_log_freq(flare_energy, monitoring_time)
 
     # Linear regression to get slope
