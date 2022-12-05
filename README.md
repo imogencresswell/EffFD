@@ -8,6 +8,34 @@ Flare frequency distributions are useful for various groups in astronomy. On the
 
 On software, many astronomers write their own codes from scratch for every project, which leads to work being unreproducible and unstandardized. Occasionally, flare-finding software is released, but they increasingly tend to rely on complicated Bayesian statistics and post-data modeling (e.g. Gaussian fitting), which may not be representative of the actual data. Many groups refuse to use these programs and end up relying on by-eye estimations. While the ‘preferred ways’ are still heavily debated, we believe a program that uses understandable de-trending/flare-finding methods (or at least some of the simpler ones in the field) would work well for many purposes.
 
+## Usage 
+To run EffFD on your local machine, first build the conda environment by typing 
+`conda create env -f envrionment.yml`
+
+Then type the command,
+`python3 main.py ./config_file`,
+
+replacing `./` with the path if your config file is stored in a different directory.
+
+This will download TESS data, create light curves and FFDs for stars outlined in your config file 
+
+### Dependencies
+Some users have had trouble building the Conda environment using the provided `environment.yml`. In that case, this code should be usable by first installing `astropy`, `scipy`, `lightkurve`, `pycodestyle`, `wget`, and `docopt`. The packages `numpy`, `matplotlib`, and `astroquery` are also required, but these should be installed as dependencies of the others.
+
+### Config file 
+The options for the config file are as follows:
+- `star_names`: This takes a list or a singular star name, or TIC number 
+- `sectors`: TESS sector 
+- `spectral_class`: Takes main sequence spectral classes O,B,A,F,G,K,M
+- `teff_low`: Minumum temperature
+- `teff_high`: Maximum temperature 
+
+You can also change the lightkurve paramerters
+
+Where the data is saved can be changed with the `out_dir`
+The code will search for previous searches specified by the `search_dir` option
+If these are left as default they will be created where the code is run  
+
 ## Current To-do
 - What kind of unit tests could we do for the functions that are mainly parsing through folders?
 
@@ -19,5 +47,3 @@ On software, many astronomers write their own codes from scratch for every proje
 ## Notes
 - Searching by Sector does not care if stars have temperatures or not, but it would be cool if it could auto-reject non-star observations. Not sure how though, using astroquery would increase run times a lot. Lightkurve might not actually have LCs for non-stars, so it wouldn't matter.
 
-## Dependencies
-Some users have had trouble building the Conda environment using the provided `environment.yml`. In that case, this code should be usable by first installing `astropy`, `scipy`, `lightkurve`, `pycodestyle`, `wget`, and `docopt`. The packages `numpy`, `matplotlib`, and `astroquery` are also required, but these should be installed as dependencies of the others.
