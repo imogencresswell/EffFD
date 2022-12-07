@@ -298,7 +298,7 @@ def analyze_lc(csv_path):
             # Flare properties of interest
             t_start = lc['time'][flare[0]]
             t_end = lc['time'][flare[-1]]
-            duration = t_start - t_end
+            duration = t_end - t_start
             flux_max = np.max(flare_flux)
             t_flux_max = flare_time[(flare_flux == flux_max)]
             fluence = np.sum(flare_flux)
@@ -450,7 +450,7 @@ def get_time_and_energy(paths):
 
             flare_eng = np.append(flare_eng, tbl['fluence'].value)
             
-            flare_duration = np.append(flare_duration, tbl['duration'])
+            flare_duration = np.append(flare_duration, tbl['duration'].value*24*60)
         
         except FileNotFoundError:
             print('Flare filepath ' + file_path + ' not found.')
@@ -555,7 +555,8 @@ def generate_ffd(obj, save_path, list_of_paths):
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
            title='EFFD for {}'.format(obj),
            yscale='log')
-    cbar=plt.colorbar(sm, label='Duration', cax=cax, ticks=[duration.min(),np.mean(duration), duration.max()])
+    cbar=plt.colorbar(sm, cax=cax, ticks=[duration.min(),np.mean(duration), duration.max()])
+    cbar.set_label('Duration [minutes]', labelpad=-50)
     cax.yaxis.set_ticks_position('right')
     # Creates histogram
     N, bins, patches = ax.hist(flare_energy, edgecolor='black', linewidth=1)
@@ -563,6 +564,7 @@ def generate_ffd(obj, save_path, list_of_paths):
         patches[i].set_facecolor(col_map(N[i]/N.max()))
     
     ax.set(ylabel='Frequency',xlabel='Flare Energy',title='Histogram for {}'.format(obj))
+    
     
     plt.savefig('{}/{}_FFD.png'.format(save_path, obj.replace(' ', '_')), bbox_inches='tight')
     plt.close(fig)
