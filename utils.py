@@ -551,7 +551,7 @@ def generate_ffd(obj, save_path, list_of_paths):
             color='black',
             label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
         ax2.legend()
-    ax2.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % e_unit,
+    ax2.set(xlabel=r'Log$_{10}$ TESS Fluence',
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
            title='EFFD for {}'.format(obj),
            yscale='log')
