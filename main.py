@@ -152,7 +152,7 @@ def main():
 
         # Combines flare data from all sectors to make FFD
         flares_path_list = glob.glob(os.path.join(star_path, '*.ecsv'))
-        
+
         if len(flares_path_list) == 0:
             print('No flares found overall')
         else:
