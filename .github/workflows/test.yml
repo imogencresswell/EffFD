@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: swe4s
+          activate-environment: efffd
           environment-file: environment.yml
       - run: |
           python3 test_utils.py
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: swe4s
+          activate-environment: efffd
           environment-file: environment.yml
       - run: pycodestyle $(git ls-files "*.py")
   run_functional_tests:
@@ -41,6 +41,6 @@ jobs:
       - uses: actions/checkout@v2
       - uses: conda-incubator/setup-miniconda@v2
         with:
-          activate-environment: swe4s
+          activate-environment: efffd
           environment-file: environment.yml
       - run: bash test_file_generation.sh
