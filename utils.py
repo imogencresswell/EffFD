@@ -3,6 +3,7 @@ import urllib.request
 import numpy as np
 import lightkurve as lk
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import astropy.units as u
 from astropy.io import ascii
 from astropy.table import Table
@@ -307,7 +308,6 @@ def analyze_lc(csv_path):
 
         # Save total light curve monitoring time for FFD statistics
         flare_table['total_lc_time'] = len(lc['time']) * 120.0 * u.second
-
         save_path = csv_path.replace('.csv', '_flares.ecsv')
         flare_table.write(save_path, overwrite=True)
 
@@ -439,6 +439,7 @@ def get_time_and_energy(paths):
 
     time = 0.0 * u.day
     flare_eng = np.array([])
+    flare_duration = np.array([])
 
     for file_path in paths:
         try:
@@ -448,13 +449,15 @@ def get_time_and_energy(paths):
                 (1.0 * tbl['total_lc_time'].unit).to(u.day)
 
             flare_eng = np.append(flare_eng, tbl['fluence'].value)
-
+            
+            flare_duration = np.append(flare_duration, tbl['duration'])
+        
         except FileNotFoundError:
             print('Flare filepath ' + file_path + ' not found.')
             continue
 
     flare_eng.sort()
-    return time.value, flare_eng, tbl['fluence'].unit
+    return time.value, flare_eng, tbl['fluence'].unit, flare_duration
 
 
 def get_log_freq(flare_eng, tot_time):
@@ -512,7 +515,7 @@ def generate_ffd(obj, save_path, list_of_paths):
     type_error_catch(save_path, str)
     type_error_catch(list_of_paths, list, str)
 
-    monitoring_time, flare_energy, e_unit = get_time_and_energy(list_of_paths)
+    monitoring_time, flare_energy, e_unit, duration = get_time_and_energy(list_of_paths)
 
     log_energy, log_frequency = get_log_freq(flare_energy, monitoring_time)
 
@@ -525,24 +528,41 @@ def generate_ffd(obj, save_path, list_of_paths):
 
     # alpha is used in some papers, but we don't need it for now
     # alpha = np.abs(slope - 1)
+    fig = plt.figure(figsize=(7.5,3.5))
 
+    ax = fig.add_axes([0.05,0.05,0.5,1])
+    ax2 = fig.add_axes([0.7,0.05,0.5,1])
+    cax = fig.add_axes([1.2, 0.05, 0.04, 1])
+    col_map = plt.cm.get_cmap('magma')
+    divnorm = mpl.colors.TwoSlopeNorm(vmin=duration.min(), vcenter=np.mean(duration), vmax=duration.max())
+    sm   = plt.cm.ScalarMappable(cmap='viridis', norm=divnorm)
+    sm.set_array([])
+
+    colour = sm.to_rgba(duration)
     # Saves FFD figure
-    fig, ax = plt.subplots()
-    ax.plot(log_energy,
+    
+    ax2.scatter(log_energy,
             10**log_frequency,
             marker='o',
-            color='skyblue')
+            color=colour, edgecolor='black')
     if len(m_ene) != 0:
-        ax.plot(m_ene,
-                10**func_powerlaw(m_ene, intercept, slope),
-                color='black',
-                label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
-        ax.legend()
-    ax.set(  # xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % e_unit,
-           xlabel=r'Log$_{10}$ TESS Fluence',
+        ax2.plot(m_ene,
+            10**func_powerlaw(m_ene, intercept, slope),
+            color='black',
+            label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
+        ax2.legend()
+    ax2.set(xlabel=r'Log$_{10}$ $E_{TESS}$ [%s]' % e_unit,
            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
            title='EFFD for {}'.format(obj),
            yscale='log')
-
-    fig.savefig('{}/{}_FFD.png'.format(save_path, obj.replace(' ', '_')))
+    cbar=plt.colorbar(sm, label='Duration', cax=cax, ticks=[duration.min(),np.mean(duration), duration.max()])
+    cax.yaxis.set_ticks_position('right')
+    # Creates histogram
+    N, bins, patches = ax.hist(flare_energy, edgecolor='black', linewidth=1)
+    for i in range(len(N)):
+        patches[i].set_facecolor(col_map(N[i]/N.max()))
+    
+    ax.set(ylabel='Frequency',xlabel='Flare Energy',title='Histogram for {}'.format(obj))
+    
+    plt.savefig('{}/{}_FFD.png'.format(save_path, obj.replace(' ', '_')), bbox_inches='tight')
     plt.close(fig)
