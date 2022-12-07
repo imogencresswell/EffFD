@@ -227,6 +227,7 @@ def save_raw_lc(obj, save_path, filter_iter, filter_sig):
         plt.savefig(save_string + '.png')
         plt.close()
 
+
 def group_by_missing(seq):
     """Takes input array and groups
     consecutive numbers
@@ -268,7 +269,7 @@ def analyze_lc(csv_path):
     -------
     _flares.ecsv file containing flare data
     """
-    
+
     type_error_catch(csv_path, str)
 
     lc = ascii.read(csv_path, guess=False, format='csv')
@@ -276,48 +277,43 @@ def analyze_lc(csv_path):
     criteria = 1 + 3*np.std(lc['flux'])
     criteria_index = np.where(lc['flux'] > criteria)[0]
     grouped_criteria = group_by_missing(criteria_index.tolist())
-    
+
     flare_index = []
     for group in grouped_criteria:
-        
         if len(group) >= 3:
             flare_index.append(group)
-    
+
     if len(flare_index) == 0:
         print('No flares found in this sector data')
+
     else:
-    
-        table_matrix = np.zeros((len(flare_index), 6))
-    
+
+        flare_table = Table(names=['start_time', 'end_time', 'duration',
+                                   'max_flux', 'max_flux_time', 'fluence'])
+
         for counts, flare in enumerate(flare_index):
-            flare_flux = lc['flux'][flare] - 1
+            flare_flux = lc['flux'][flare] - 1  # quiscent=1; flare-only flux
             flare_time = lc['time'][flare]
-            # start time
-            table_matrix[counts,0] = lc['time'][flare[0]]
-            # end time
-            table_matrix[counts,1] = lc['time'][flare[-1]]
-            # duration
-            table_matrix[counts,2] = lc['time'][flare[-1]] - lc['time'][flare[0]]
-            # max flux
-            table_matrix[counts,3] = np.max(flare_flux)
-            # max flux time
-            table_matrix[counts,4] = lc['time'][np.where(flare_flux == np.max(flare_flux))]
-            # fluence
-            table_matrix[counts,5] = np.sum(flare_flux)
-        
-        flare_table = Table(table_matrix, names = ['start_time',
-                                               'end_time',
-                                               'duration',
-                                               'max_flux',
-                                               'max_flux_time',
-                                               'fluence'])
-    
-    
+
+            # Flare properties of interest
+            t_start = lc['time'][flare[0]]
+            t_end = lc['time'][flare[-1]]
+            duration = t_start - t_end
+            flux_max = np.max(flare_flux)
+            t_flux_max = flare_time[(flare_flux == flux_max)]
+            fluence = np.sum(flare_flux)
+
+            flare_table.add_row([t_start, t_end, duration,
+                                 flux_max, t_flux_max, fluence])
+
+        # Save total light curve monitoring time for FFD statistics
         flare_table['total_lc_time'] = len(lc['time']) * 120.0 * u.second
-        
         save_path = csv_path.replace('.csv', '_flares.ecsv')
         flare_table.write(save_path, overwrite=True)
-        print(str(len(flare_table['fluence']))+' flares were found in this sector data!')
+
+        print(str(len(flare_table['fluence'])) +
+              ' flares were found in this sector data!')
+
 
 def get_middle_ffd_regime(x, y, min_slope=-5.0, max_slope=-1.0):
     """Finds the location of the middle regime of the flare frequency diagram
@@ -464,7 +460,6 @@ def get_time_and_energy(paths):
     return time.value, flare_eng, tbl['fluence'].unit, flare_duration
 
 
-
 def get_log_freq(flare_eng, tot_time):
     """Takes the flare energy array and the time it was observed
     over and returns the cumulative frequency for each energy
@@ -519,7 +514,7 @@ def generate_ffd(obj, save_path, list_of_paths):
     type_error_catch(obj, str)
     type_error_catch(save_path, str)
     type_error_catch(list_of_paths, list, str)
-    
+
     monitoring_time, flare_energy, e_unit, duration = get_time_and_energy(list_of_paths)
 
     log_energy, log_frequency = get_log_freq(flare_energy, monitoring_time)
@@ -528,9 +523,10 @@ def generate_ffd(obj, save_path, list_of_paths):
     try:
         m_ene, m_fre = get_middle_ffd_regime(log_energy, log_frequency)
         intercept, slope, slope_err = calculate_slope_powerlaw(m_ene, m_fre)
-    except:
+    except Exception:
         m_ene = []
-        
+
+    # alpha is used in some papers, but we don't need it for now
     # alpha = np.abs(slope - 1)
     fig = plt.figure(figsize=(7.5,3.5))
 
