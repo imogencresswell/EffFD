@@ -23,7 +23,10 @@ class TestDataProcessor(unittest.TestCase):
         self.y.sort()
         self.lo_y, self.lo_x = ut.get_log_freq(self.y, 80.0)
         self.re_x, self.re_y = ut.get_middle_ffd_regime(self.lo_x, self.lo_y)
-
+        self.temp_file = np.array([[1234, 5678, 91011], [1000, 4000, 2000],
+                                   [1, 1, 1], [10, 10, 10], [10, 10, 10]])
+        np.savetxt('./temp_fake.csv', self.temp_file.T,
+                   delimiter=',')
         self.tics = np.array([['123', '1234'], [20, 30]])
         np.savetxt('./sector9999.csv', self.tics.T,
                    delimiter=',', fmt='%s', header='\n\n\n\n\n\n')
@@ -77,16 +80,23 @@ class TestDataProcessor(unittest.TestCase):
         self.assertRaises(TypeError, ut.build_names_from_sectors, 10, './')
         self.assertRaises(TypeError, ut.build_names_from_sectors, ['a'], 10)
 
-    def build_all_stars_table(self):
-        # positive/negative unnecessary, as this is file generation
-        # NOTE: This function will likely be removed or heavily modified,
-        #       since this method takes too long and we have found an alt
-        #       method to provide a list of TESS stars with temperatures
+    def test_tics_from_temp(self):
 
-        # assert: Check that incorrect types raise errors.
-        self.assertRaises(TypeError, ut.build_all_stars_table, [10, 10], './')
-        self.assertRaises(TypeError, ut.build_all_stars_table, 10, './')
-        self.assertRaises(TypeError, ut.build_all_stars_table, ['a', 'a'], 10)
+        # positive
+        self.assertTrue(ut.tics_from_temp('./temp_fake.csv',
+                        1000, 4000, star_max=None) == [1234, 91011, 5678])
+        self.assertTrue(len(ut.tics_from_temp(
+            './temp_fake.csv', 1000, 4000, star_max=1)) == 1)
+
+        # negative:
+        self.assertFalse(ut.tics_from_temp('./temp_fake.csv',
+                         1000, 4000, star_max=None) != [1234, 91011, 5678])
+        self.assertFalse(len(ut.tics_from_temp(
+            './temp_fake.csv', 1000, 4000, star_max=1)) == 2)
+
+        self.assertRaises(TypeError, ut.tics_from_temp, 3, 2000, 3000, 1)
+        self.assertRaises(TypeError, ut.tics_from_temp, './', 2000.5, 3000, 1)
+        self.assertRaises(TypeError, ut.tics_from_temp, './', 2000, 3000.5, 1)
 
     def test_save_raw_lc(self):
         # positive/negative unncessary - file generation mainly from lightkurve

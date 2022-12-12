@@ -9,10 +9,10 @@
 # or (teff_low, teff_high)
 #
 
-#star_names = AU Mic
+star_names = AU Mic
 # sectors = 1
-spectral_type = M
-star_max=5
+#spectral_type = M
+#star_max=5
 # teff_low = 2000
 # teff_high = 3500
 
