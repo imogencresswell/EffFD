@@ -10,7 +10,7 @@ On software, many astronomers write their own codes from scratch for every proje
 
 ## Usage 
 To run EffFD on your local machine, first build the conda environment by typing 
-`conda create env -f envrionment.yml`
+`conda env create -f envrionment.yml`
 
 Then type the command,
 `python3 main.py ./config_file`,
@@ -36,14 +36,11 @@ Where the data is saved can be changed with the `out_dir`
 The code will search for previous searches specified by the `search_dir` option
 If these are left as default they will be created where the code is run  
 
-## Current To-do
-- What kind of unit tests could we do for the functions that are mainly parsing through folders?
-
 ## Potential To-do
-- We have a general way of selecting the middle regime of the FFD, but it would be better to test this against real data to see how it holds up and possibly figure out a more rigorous algorithm. This one is decently simple to explain, though, so if tests against real data come out fine, it could be something to stick with.
-- ISSUE: search_lightcurve does not seem to work for all stars. AF Psc has a light curve in the MAST archive, but it doesn't return results, even if you remove the exptime and author/mission qualifiers. Not sure if there's anything we can do about this.
+- A few more published FFDs should be put through the unit testing, when time allows.
+- External Issue: `lightkurve.search_lightcurve()` does not seem to work for all stars. AF Psc has a light curve in the MAST archive, but it doesn't return results, even if you remove the exptime and author/mission qualifiers. Not sure if there's anything we can do about this.
 - Some people might want to use just the easy FFD creation aspect with more complex flare finding routines. We could add a functionality to feed in just the property tables (e.g. star_01_flares.ecsv) and have figures created.
 
 ## Notes
-- Searching by Sector does not care if stars have temperatures or not, but it would be cool if it could auto-reject non-star observations. Not sure how though, using astroquery would increase run times a lot. Lightkurve might not actually have LCs for non-stars, so it wouldn't matter.
+- Searching by Sector does not care if stars have temperatures or not, but it would be cool if it could auto-reject non-star observations. Not sure how though, using astroquery would increase run times a lot. Lightkurve might not actually have LCs for non-stars, so it wouldn't matter. UPDATE: our pre-compiled list takes care of this; we just need to document it clearly.
 
