@@ -3,7 +3,7 @@ test -e ssshtest || wget -q https://raw.githubusercontent.com/ryanlayer/ssshtest
 . ssshtest
 
 run run_aumic_search \
-    python3 main.py ./config_file
+    python3 main.py ./config_file_test
 assert_exit_code 0
 assert_no_stderr
 assert_in_stdout "Creating stellar FFDs"

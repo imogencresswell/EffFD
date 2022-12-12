@@ -9,6 +9,7 @@ from astropy.io import ascii
 from astropy.table import Table
 from scipy.optimize import curve_fit
 from astroquery.vizier import Vizier
+import pandas as pd
 
 
 def type_error_catch(var, vartype, inner_vartype=None, err_msg=None):
@@ -152,25 +153,52 @@ def build_names_from_sectors(sector_list, search_path):
     return tess_names_list
 
 
-def build_all_stars_table(tic_list, search_path):
-    type_error_catch(tic_list, list, str)
-    type_error_catch(search_path, str)
+def tics_from_temp(path, teff_low, teff_high, star_max):
+    """Returns list of TESS names (e.g. 'TIC 1234') of objects observed
+    within user defined temperature range or spectral class
 
-    save_path = search_path + 'all_stars_table.csv'
-    star_tbl = None
-    v = Vizier(catalog="IV/39/tic82", row_limit=-1, timeout=300)
+    Parameters
+    ----------
+    path : str
+        path to csv file of TIC and temperatures
 
-    for count, tic in enumerate(tic_list):
-        print('\nTIC {} {}/{}.'.format(tic, count + 1, len(tic_list)))
-        cat = v.query_constraints(TIC=tic)[0]
+    teff_low: int
+        Lower limit on temperature
 
-        if cat['S_G'] == 'STAR' and cat['Teff'] > 0.0:
-            if star_tbl is None:
-                star_tbl = cat
-            else:
-                star_tbl.add_row(cat[0])
+    teff_high: int
+        Upper limit on temperature
 
-    star_tbl.write(save_path)
+    star_max: int
+        Maximum number of stars to do FFD on
+
+    Returns
+    -------
+    tess_names_list : list of str
+        TESS names for all (or some depending on star_max)
+        observed objects in given temp range
+
+    """
+    type_error_catch(path, str)
+    type_error_catch(teff_low, int)
+    type_error_catch(teff_high, int)
+
+    star_table = pd.read_csv(
+        path, names=['TIC', 'Teff', 'Teff_err', 'RA', 'Dec'])
+    star_table = star_table.sort_values(by='Teff').reset_index()
+    Teff_low_ind = star_table['Teff'].sub(teff_low).abs().idxmin()
+    Teff_high_ind = star_table['Teff'].sub(teff_high).abs().idxmin()
+    TIC_list_full = []
+    for i in range(Teff_low_ind, Teff_high_ind+1):
+        TIC_list_full.append(int(star_table['TIC'][i]))
+    if star_max is not None:
+        TIC_list = []
+        rand_arr = np.random.choice(
+            range(0, len(TIC_list_full)), size=star_max)
+        for i in range(len(rand_arr)):
+            TIC_list.append(TIC_list_full[rand_arr[i]])
+        return TIC_list
+    else:
+        return TIC_list_full
 
 
 def save_raw_lc(obj, save_path, filter_iter, filter_sig):
@@ -449,9 +477,10 @@ def get_time_and_energy(paths):
                 (1.0 * tbl['total_lc_time'].unit).to(u.day)
 
             flare_eng = np.append(flare_eng, tbl['fluence'].value)
-            
-            flare_duration = np.append(flare_duration, tbl['duration'].value*24*60)
-        
+
+            flare_duration = np.append(
+                flare_duration, tbl['duration'].value*24*60)
+
         except FileNotFoundError:
             print('Flare filepath ' + file_path + ' not found.')
             continue
@@ -515,7 +544,8 @@ def generate_ffd(obj, save_path, list_of_paths):
     type_error_catch(save_path, str)
     type_error_catch(list_of_paths, list, str)
 
-    monitoring_time, flare_energy, e_unit, duration = get_time_and_energy(list_of_paths)
+    monitoring_time, flare_energy, e_unit, duration = get_time_and_energy(
+        list_of_paths)
 
     log_energy, log_frequency = get_log_freq(flare_energy, monitoring_time)
 
@@ -528,43 +558,51 @@ def generate_ffd(obj, save_path, list_of_paths):
 
     # alpha is used in some papers, but we don't need it for now
     # alpha = np.abs(slope - 1)
-    fig = plt.figure(figsize=(7.5,3.5))
+    fig = plt.figure(figsize=(7.5, 3.5))
 
-    ax = fig.add_axes([0.05,0.05,0.5,1])
-    ax2 = fig.add_axes([0.7,0.05,0.5,1])
+    ax = fig.add_axes([0.05, 0.05, 0.5, 1])
+    ax2 = fig.add_axes([0.7, 0.05, 0.5, 1])
     cax = fig.add_axes([1.2, 0.05, 0.04, 1])
     col_map = plt.cm.get_cmap('magma')
-    divnorm = mpl.colors.TwoSlopeNorm(vmin=duration.min(), vcenter=np.mean(duration), vmax=duration.max())
-    sm   = plt.cm.ScalarMappable(cmap='viridis', norm=divnorm)
-    sm.set_array([])
+    if len(flare_energy) >= 3:
+        divnorm = mpl.colors.TwoSlopeNorm(
+            vmin=duration.min(), vcenter=np.mean(duration),
+            vmax=duration.max())
+        sm = plt.cm.ScalarMappable(cmap='viridis', norm=divnorm)
+        sm.set_array([])
+        colour = sm.to_rgba(duration)
+        cbar = plt.colorbar(sm, cax=cax, ticks=[
+                            duration.min(), np.mean(duration), duration.max()])
+        cbar.set_label('Duration [minutes]', labelpad=-50)
+        cax.yaxis.set_ticks_position('right')
+    else:
+        colour = 'blue'
 
-    colour = sm.to_rgba(duration)
     # Saves FFD figure
-    
+
     ax2.scatter(log_energy,
-            10**log_frequency,
-            marker='o',
-            color=colour, edgecolor='black')
+                10**log_frequency,
+                marker='o',
+                color=colour, edgecolor='black')
     if len(m_ene) != 0:
         ax2.plot(m_ene,
-            10**func_powerlaw(m_ene, intercept, slope),
-            color='black',
-            label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
+                 10**func_powerlaw(m_ene, intercept, slope),
+                 color='black',
+                 label=r'Slope: $%.2f\pm%.2f$' % (slope, slope_err))
         ax2.legend()
     ax2.set(xlabel=r'Log$_{10}$ TESS Fluence',
-           ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
-           title='EFFD for {}'.format(obj),
-           yscale='log')
-    cbar=plt.colorbar(sm, cax=cax, ticks=[duration.min(),np.mean(duration), duration.max()])
-    cbar.set_label('Duration [minutes]', labelpad=-50)
-    cax.yaxis.set_ticks_position('right')
+            ylabel=r'Cumulative Number of Flares $>E_{TESS}$ Per Day',
+            title='EFFD for {}'.format(obj),
+            yscale='log')
+
     # Creates histogram
     N, bins, patches = ax.hist(flare_energy, edgecolor='black', linewidth=1)
     for i in range(len(N)):
         patches[i].set_facecolor(col_map(N[i]/N.max()))
-    
-    ax.set(ylabel='Frequency',xlabel='Flare Energy',title='Histogram for {}'.format(obj))
-    
-    
-    plt.savefig('{}/{}_FFD.png'.format(save_path, obj.replace(' ', '_')), bbox_inches='tight')
+
+    ax.set(ylabel='Frequency', xlabel='Flare Energy',
+           title='Histogram for {}'.format(obj))
+
+    plt.savefig('{}/{}_FFD.png'.format(save_path,
+                obj.replace(' ', '_')), bbox_inches='tight')
     plt.close(fig)

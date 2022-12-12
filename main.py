@@ -13,12 +13,12 @@ Options:
     --sectors=<sec>                 TESS Sector to pull stars from
     --spectral_type=<type>         Spectral type to search for stars
     --teff_low=<temp>              Low Teff limit to search [default: 2000]
-    --teff_high=<temp>             High Teff limit to search [default: 3500]
+    --teff_high=<temp>             High Teff limit to search [default: 3000]
 
     --savgov_iterations=<iter>     Iterations for lc.flatten  [default: 9]
     --savgov_sigma_cutoff=<sig>    Sigma cutoff for lc.flatten  [default: 3]
 
-    --build_star_table=<bool>      Download all sector data  [default: False]
+    --star_max=<max>               Maximum number of stars   [default: None]
 
 """
 import os
@@ -57,35 +57,6 @@ def main():
     if not os.path.isdir(args['--out_dir']):
         os.mkdir(args['--out_dir'])
 
-    # Download all sectors
-    # and create table of all TESS stars with temperatures
-    if args['--build_star_table'] is True:
-
-        if os.path.isfile(search_dir + 'all_stars_table.csv'):
-            print('WARNING: Table containing temperature for all TESS stars')
-            print('already exists. Please delete before creating a new one.')
-            sys.exit(1)
-
-        s_count = 1
-        while s_count > 0:
-            try:
-                ut.save_sector(str(s_count), search_dir)
-                s_count += 1
-            # Continues until the most recent TESS sector upload
-            except ValueError:
-                s_last = s_count - 1
-                print('Sector 1-{} data downloaded.\n'.format(s_last))
-                s_count = 0
-
-        sec_list = list(range(1, s_last))
-        all_stars = ut.get_sector_tics(sec_list, search_dir)
-        ut.build_all_stars_table(all_stars, search_dir)
-
-        print('Table for all current TESS stars with temperatures created.')
-        print('This table is located in {}'.format(search_dir))
-        print('\nExiting program...\n')
-        sys.exit(0)
-
     print('\n###############################')
     print('#### Building star list... ####')
     print('###############################\n')
@@ -115,9 +86,24 @@ def main():
         if args['--spectral_type'] is not None:
             spectral_type = args['--spectral_type']
             teff_low, teff_high = ut.get_spectral_temp(spectral_type)
+            print('Finding stars in spectral class '+str(spectral_type))
 
-        # ASTROQUERY FUNCTION HERE
+        if args['--star_max'] is not None:
+            star_max = int(args['--star_max'])
+
+        try:  # checks to see if temperature data is already downloaded
+            file = open('./tic_with_temp.csv')
+        except FileNotFoundError:  # if it isn't it downloads it
+            os.system("wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1ftptCZath0-QQoUrTSu9NMqj5KXCJwEE' -O tic_with_temp.csv")  # nopep8
+
+        tics_list_path = "./tic_with_temp.csv"
+        tics_arr = ut.tics_from_temp(
+            tics_list_path, teff_low, teff_high, star_max)
+
         star_names_list = []
+        for i in range(len(tics_arr)):
+            star_names_list.append('TIC '+str(tics_arr[i]))
+        print(star_names_list)
 
     print('\n###############################')
     print('#### Creating stellar FFDs ####')
