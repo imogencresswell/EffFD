@@ -29,6 +29,7 @@ The options for the config file are as follows:
 - `spectral_class`: Takes main sequence spectral classes O,B,A,F,G,K,M
 - `teff_low`: Minumum temperature
 - `teff_high`: Maximum temperature 
+- `star_max`: The maximum number of stars to generate FFD's for
 
 You can also change the lightkurve paramerters
 
@@ -36,11 +37,7 @@ Where the data is saved can be changed with the `out_dir`
 The code will search for previous searches specified by the `search_dir` option
 If these are left as default they will be created where the code is run  
 
-## Potential To-do
-- A few more published FFDs should be put through the unit testing, when time allows.
-- External Issue: `lightkurve.search_lightcurve()` does not seem to work for all stars. AF Psc has a light curve in the MAST archive, but it doesn't return results, even if you remove the exptime and author/mission qualifiers. Not sure if there's anything we can do about this.
-- Some people might want to use just the easy FFD creation aspect with more complex flare finding routines. We could add a functionality to feed in just the property tables (e.g. star_01_flares.ecsv) and have figures created.
+When using the spectral class or temperature options, a .csv file containing TIC numbers and temperatures is downloaded. The TICs within the correct temperature range will then be analysed. This could be ~10,000 stars or more so the user should specify star_max which will choose a random selection from the given temperature range.
 
-## Notes
-- Searching by Sector does not care if stars have temperatures or not, but it would be cool if it could auto-reject non-star observations. Not sure how though, using astroquery would increase run times a lot. Lightkurve might not actually have LCs for non-stars, so it wouldn't matter. UPDATE: our pre-compiled list takes care of this; we just need to document it clearly.
+
 
